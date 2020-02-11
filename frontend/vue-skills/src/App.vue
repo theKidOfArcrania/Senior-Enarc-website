@@ -9,7 +9,7 @@
         <v-img
           class="shrink mr-2"
           contain
-          src="./assets/Temoc_Secondary_Orange.svg"
+          src="./assets/Temoc_Secondary_Orange.png"
           transition="scale-transition"
           width="80"
         />
