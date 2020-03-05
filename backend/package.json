@@ -4,9 +4,9 @@
   "description": "",
   "main": "lib/server.js",
   "scripts": {
-    "test": "mocha",
-    "start": "node_modules/.bin/eslint src/**; node src/server.js",
-    "lint": "node_modules/.bin/eslint src/**"
+    "test": "eslint lib/** && mocha",
+    "start": "eslint lib/** && node lib/server.js",
+    "lint": "eslint lib/**"
   },
   "repository": {
     "type": "git",
