@@ -4,9 +4,14 @@
   "description": "",
   "main": "lib/server.js",
   "scripts": {
-    "test": "eslint lib/** && mocha",
-    "start": "eslint lib/** && node lib/server.js",
-    "lint": "eslint lib/**"
+    "test": "mocha",
+    "start": "node lib/server.js",
+    "build": "echo build",
+    "lint": "eslint lib/**",
+
+    "pretest": "npm run lint",
+    "prebuild": "npm run test",
+    "prestart": "npm run lint"
   },
   "repository": {
     "type": "git",
