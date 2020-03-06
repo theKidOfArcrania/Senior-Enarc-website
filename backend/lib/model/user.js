@@ -1,3 +1,5 @@
+const db = require('./db.js');
+
 /**
  * Syntactical function to reload some field's value or to initialize it if it
  * doesn't exist.
@@ -9,21 +11,25 @@
 function doReloadOr(obj, fld, Otherwise) {
   val = obj[fld];
   if (!val) {
-    val = obj[fld] = new Otherwise();
+    val = new Otherwise();
+    Object.defineProperty(obj, fld, {
+      writable: false,
+      value: val,
+    });
   }
   return val.reload();
 }
 
-/**
- * Dummy function when we need to load from a SQL database
- * @return {Promise} a promise that succeeds always.
- */
-function dummyload() {
-  return new Promise((fulfill, reject) => {
-    console.log('TODO: load from database');
-    fulfill(undefined);
-  });
-}
+// function watchProp(obj, fld, val, callback) {
+//   Object.defineProperty(obj, fld, {
+//     get: () => {
+//       return val;
+//     }, set: (newval) => {
+//       val = newval;
+//       callback(val, newval);
+//     },
+//   });
+// }
 
 /**
  * Contains the data model information of a user.
@@ -35,6 +41,7 @@ class User {
    */
   constructor(uid) {
     Object.defineProperty(this, 'uid', {writable: false, value: uid});
+    // TODO: check dirty properties
   }
 
   /**
@@ -42,8 +49,9 @@ class User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload().then((_) => {
+    return db.inst.loadUserInfo(this.uid).then((u) => {
+      Object.assign(this, u);
+    }).then((_) => {
       // Load employee data
       if (this.isEmployee) {
         return doReloadOr(this, 'employee', Employee.bind(null, this.uid));
@@ -74,8 +82,9 @@ class Employee extends User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload();
+    return db.inst.loadEmployeeInfo(this.uid).then((u) => {
+      Object.assign(this, u);
+    });
   }
 }
 
@@ -96,16 +105,17 @@ class UTDPersonnel extends User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload().then((_) => {
+    return db.inst.loadUTDInfo(this.uid).then((u) => {
+      Object.assign(this, u);
+    }).then((_) => {
       const t = UTDPersonnel.types;
       switch (this.uType) {
         case t.STUDENT:
-          return doReloadOr(obj, 'student', Student.bind(null, this.uid));
+          return doReloadOr(this, 'student', Student.bind(null, this.uid));
         case t.STAFF:
-          return doReloadOr(obj, 'staff', Staff.bind(null, this.uid));
+          return doReloadOr(this, 'staff', Staff.bind(null, this.uid));
         case t.FACULTY:
-          return doReloadOr(obj, 'faculty', Faculty.bind(null, this.uid));
+          return doReloadOr(this, 'faculty', Faculty.bind(null, this.uid));
       }
     });
   }
@@ -135,8 +145,9 @@ class Student extends User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload();
+    return db.inst.loadStudentInfo(this.uid).then((u) => {
+      Object.assign(this, u);
+    });
   }
 }
 
@@ -158,8 +169,9 @@ class Faculty extends User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload();
+    return db.inst.loadFacultyInfo(this.uid).then((u) => {
+      Object.assign(this, u);
+    });
   }
 }
 
@@ -181,12 +193,15 @@ class Staff extends User {
    * @return {Promise} a promise on successful loading of database
    */
   reload() {
-    // TODO: load from backend database
-    return dummyload();
+    // Nothing to load
+    return Promise.resolve();
   }
 }
 
 exports.User = User;
 exports.Employee = Employee;
 exports.UTDPersonnel = UTDPersonnel;
+exports.Student = Student;
+exports.Faculty = Faculty;
+exports.Staff = Staff;
 
