@@ -1,23 +1,14 @@
-# Senior Enarc
+# Backend
 
-This is a Senior Design project of Spring 2020 semester with the goals of
-creating a more robust platform for approving, assigning, and appropriating
-the projects assigned to all CS students for UTDallas. 
+## Simple commands
 
-## Building/Installing Instructions (work in progress)
-First you must have python3 and pip installed on your machine. You should also
-have the pachage `venv` installed by running the following command:
+Here are basic commands for various actions:
 
-```bash
-pip3 install virtualenv
+```
+npm install   # install all dependencies
+npm run lint  # just run the linter
+npm test      # run the linter and test cases
+npm start     # starts the backend server
 ```
 
-Then simply install all dependencies by running the following command:
-```bash
-python3 -m virtualenv .venv
-source .venv/bin/activate # enter in the virtual environment
-pip3 install -r requirements.txt
-```
 
-Note: the previous instructions may change. Also the setup.py process should be
-used instead in the end.
