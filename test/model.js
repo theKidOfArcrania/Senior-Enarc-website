@@ -1,79 +1,13 @@
 const assert = require('assert');
 const user = require('../lib/model/user.js');
-const fs = require('fs');
 const dbinst = require('../lib/model/db.js');
 
 const utypes = user.UTDPersonnel.types;
 
-// Load test data
-db = {};
-for (const ent of ['COMPANY', 'PROJECT', 'TEAM', 'USER']) {
-  db[ent] = JSON.parse(fs.readFileSync(`test/data/${ent}.json`, 'utf8'));
-}
+const loader = require('./data/loader.js');
 
-// Somewhat normalized USER entity (with some redundancy)
-db2 = {
-  USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-  STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
-  CHOICE: {}, HELP_TICKET: {},
-};
+const db2 = loader.db;
 
-// Normalize USER entity
-for (const ent of db.USER) {
-  if (ent.isUtd) {
-    db2.UTD_PERSONNEL[ent.userId] = ent.utd;
-    delete ent.utd['uid'];
-    switch (ent.utd.uType) {
-      case utypes.STUDENT:
-        delete ent.student['suid'];
-        db2.STUDENT[ent.userId] = ent.student;
-        break;
-      case utypes.STAFF:
-        break;
-      case utypes.FACULTY:
-        delete ent.faculty['fuid'];
-        db2.FACULTY[ent.userId] = ent.faculty;
-        db2.FACULTY_OR_TEAM[ent.faculty.tid] = {
-          teamId: ent.faculty.tid,
-          isRegTeam: false,
-        };
-        break;
-      default:
-        assert.fail('bad uType');
-    }
-  }
-
-  if (ent.isEmployee) {
-    db2.EMPLOYEE[ent.userId] = ent.employee;
-  }
-
-  delete ent['utd'];
-  delete ent['faculty'];
-  delete ent['employee'];
-  delete ent['student'];
-  db2.USER[ent.userId] = ent;
-}
-
-// Set primary key on PROJECT + COMPANY
-for (const ent of db.PROJECT) {
-  db2.PROJECT[ent.projId] = ent;
-}
-
-for (const ent of db.COMPANY) {
-  db2.COMPANY[ent.name] = ent;
-}
-
-// Normalize TEAM
-for (const ent of db.TEAM) {
-  db2.TEAM[ent.tid] = ent;
-  db2.FACULTY_OR_TEAM[ent.tid] = {
-    teamId: ent.tid,
-    isRegTeam: true,
-  };
-}
-
-
-dbinst.inst = new dbinst.Database(db2);
 
 /**
  * Transforms a function into a filter function.
@@ -93,8 +27,12 @@ function filter(fn) {
 
 /**
  * This verifies that a DB model is correct and valid.
+ * @param {Object} model     the database model to test
  */
-function verifyModel() {
+function verifyModel(model) {
+  before(() => loader.loadIntoDB(model));
+  beforeEach(() => dbinst.inst = model);
+
   describe('user', function() {
     // Various filters to see different views of a user
     const utdFilt = filter((uu) => (uu.isUtd && uu.utd));
@@ -118,12 +56,12 @@ function verifyModel() {
     function forEachUsersB(filter, action) {
       return function() {
         pms = [];
-        for (const u of db.USER) {
-          let uu = new user.User(u.userId);
+        for (const u of loader.users) {
+          let uu = new user.User(u);
           pms.push(uu.reload().then((_) => {
             uu = filter(uu);
             if (uu) {
-              action(u.userId, uu);
+              action(u, uu);
             }
           }));
         }
@@ -212,8 +150,17 @@ function verifyModel() {
       const maybe = ['uid'];
       checkUserProps(it, staffFilt, db2.STAFF, should, maybe);
     });
+
+    describe('Employee', function() {
+      const should = ['worksAt', 'password'];
+      const maybe = ['uid'];
+      checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
+    });
   });
 };
 
-// TODO: also verify that the model works for all other backend db's
-describe('model', verifyModel);
+describe('model', function() {
+  const basic = new dbinst.Database();
+  describe('basic', verifyModel.bind(undefined, basic));
+  // TODO: insert other models here
+});
