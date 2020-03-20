@@ -25,7 +25,9 @@
   "dependencies": {
     "assert": "^2.0.0",
     "express": "^4.17.1",
-    "express-session": "^1.17.0"
+    "express-session": "^1.17.0",
+    "fs": "0.0.1-security",
+    "nodemailer": "^6.4.5"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
