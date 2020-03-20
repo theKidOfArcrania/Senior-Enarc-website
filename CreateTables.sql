@@ -21,7 +21,7 @@ create table Faculty_Or_Team (
 
 create table UTD_Personnel (
 	Uid int,
-    UType varchar(20),
+    UType int NOT NULL,
     NetID varchar(10),
     isAdmin boolean,
     PRIMARY KEY (Uid),
