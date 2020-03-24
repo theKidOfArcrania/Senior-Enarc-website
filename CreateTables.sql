@@ -1,9 +1,10 @@
+drop database if exists CSProjectSystem;
 create database CSProjectSystem;
 
 use CSProjectSystem;
 
-create table users (
-	UserID int,
+create table Users (
+	UserID int NOT NULL AUTO_INCREMENT,
     Fname varchar(50) NOT NULL,
     Lname varchar(50) NOT NULL,
     Email varchar(30) NOT NULL,
@@ -14,23 +15,23 @@ create table users (
 );
 
 create table Faculty_Or_Team (
-	TeamID int,
+	TeamID int AUTO_INCREMENT,
     is_reg_team boolean,
     PRIMARY KEY (TeamID)
 );
 
 create table UTD_Personnel (
-	Uid int,
+	Uid int AUTO_INCREMENT,
     UType int NOT NULL,
-    NetID varchar(10),
-    isAdmin boolean,
+    NetID varchar(10) NOT NULL,
+    isAdmin boolean NOT NULL,
     PRIMARY KEY (Uid),
-    FOREIGN KEY (Uid) references users (UserID)
+    FOREIGN KEY (Uid) references Users (UserID)
 );
 
 create table Faculty (
-	Fuid int,
-    Tid int,
+	Fuid int AUTO_INCREMENT,
+    Tid int NOT NULL,
     PRIMARY KEY (Fuid),
     FOREIGN KEY (Fuid) references UTD_Personnel (Uid),
     FOREIGN KEY (Tid) references Faculty_Or_Team (TeamID)
@@ -38,18 +39,18 @@ create table Faculty (
 
 create table Student (
 	Suid int,
-    Major varchar(30),
-    Stu_Resume blob,
+    Major varchar(30) NOT NULL,
+    Stu_Resume varchar(100),
     Member_of int,
     PRIMARY KEY (Suid),
     FOREIGN KEY (Suid) references UTD_Personnel (Uid)
 );
 
 create table Project (
-	ProjID int,
+	ProjID int AUTO_INCREMENT,
     Pname varchar(50) NOT NULL,
-    Image blob,
-    Project_document blob,
+    Image varchar(100),
+    Project_document varchar(100),
     Pdescription varchar(1000),
     Mentor int NOT NULL,
     Sponsor int NOT NULL,
@@ -57,8 +58,8 @@ create table Project (
     Status varchar(15) NOT NULL,
     Is_visible boolean NOT NULL,
     PRIMARY KEY (ProjID),
-    FOREIGN KEY (Mentor) references users (UserID),
-    FOREIGN KEY (Sponsor) references users (UserID),
+    FOREIGN KEY (Mentor) references Users (UserID),
+    FOREIGN KEY (Sponsor) references Users (UserID),
     FOREIGN KEY (Advisor) references Faculty (Fuid)
 );
 
@@ -89,12 +90,12 @@ create table Skills_Req (
 );
 
 create table Help_Ticket (
-	Hid int,
+	Hid int AUTO_INCREMENT,
     HStatus varchar(50),
     HDescription varchar(100),
     Requestor int,
     PRIMARY KEY (Hid),
-    FOREIGN KEY (Requestor) references users (UserID)
+    FOREIGN KEY (Requestor) references Users (UserID)
 );
 
 alter table Student

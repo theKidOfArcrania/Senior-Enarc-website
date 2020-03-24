@@ -1,6 +1,7 @@
 const assert = require('assert');
 const user = require('../lib/model/user.js');
 const dbinst = require('../lib/model/db.js');
+const sqldb = require('../lib/model/sqldb.js');
 
 const utypes = user.UTDPersonnel.types;
 
@@ -30,7 +31,10 @@ function filter(fn) {
  * @param {Object} model     the database model to test
  */
 function verifyModel(model) {
-  before(() => loader.loadIntoDB(model));
+  before(() => {
+    console.log('LOADING');
+    loader.loadIntoDB(model);
+  });
   beforeEach(() => dbinst.inst = model);
 
   describe('user', function() {
@@ -159,8 +163,16 @@ function verifyModel(model) {
   });
 };
 
-describe('model', function() {
+describe('model', async function() {
   const basic = new dbinst.Database();
   describe('basic', verifyModel.bind(undefined, basic));
-  // TODO: insert other models here
+  const sqlconn = new sqldb.SQLDatabase({
+    //  Change Login Information as required
+    host: 'localhost',
+    user: 'dbuser',
+    password: 'thisisasecurepassword',
+    database: 'CSProjectSystem',
+  });
+  await sqlconn.connect();
+  describe('mysql', verifyModel.bind(undefined, sqlconn));
 });
