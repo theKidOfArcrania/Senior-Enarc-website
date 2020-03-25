@@ -33,7 +33,7 @@ function filter(fn) {
 function verifyModel(model) {
   before(() => {
     console.log('LOADING');
-    loader.loadIntoDB(model);
+    return loader.loadIntoDB(model);
   });
   beforeEach(() => dbinst.inst = model);
 

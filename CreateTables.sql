@@ -7,7 +7,7 @@ create table Users (
 	UserID int NOT NULL AUTO_INCREMENT,
     Fname varchar(50) NOT NULL,
     Lname varchar(50) NOT NULL,
-    Email varchar(30) NOT NULL,
+    Email varchar(30) NOT NULL UNIQUE,
     Address varchar(100) NOT NULL,
     is_utd boolean NOT NULL,
     is_employee boolean NOT NULL,

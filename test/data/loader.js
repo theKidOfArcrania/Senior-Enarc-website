@@ -1,6 +1,7 @@
 const fs = require('fs');
 const user = require('../../lib/model/user.js');
 const utypes = user.UTDPersonnel.types;
+const bcrypt = require('bcrypt');
 
 // Load test data
 db = {};
@@ -46,6 +47,8 @@ for (const ent of db.USER) {
   }
 
   if (ent.isEmployee) {
+    // Generate bcrypt hash for password
+    ent.employee.password = bcrypt.hashSync(ent.employee.password, 5);
     db2.EMPLOYEE[ent.userId] = ent.employee;
   }
 
