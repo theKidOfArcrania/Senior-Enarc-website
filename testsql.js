@@ -16,8 +16,8 @@ function promisifyObj(obj) {
   function Promisified() {
     // Make a getter/setter pair to the original object for convenience
     for (const name of Object.getOwnPropertyNames(obj)) {
-      Object.defineProperty(this, name, 
-        {get: () => obj[name], 
+      Object.defineProperty(this, name,
+        {get: () => obj[name],
          set: (val) => obj[name] = val});
     }
   }
@@ -39,9 +39,9 @@ function promisifyObj(obj) {
 
 const con = mysql.createConnection({
   //  Change Login Information as required
-  host: 'localhost',
-  user: 'dbuser',
-  password: 'thisisasecurepassword',
+  host: '127.0.0.1',
+  user: 'root',
+  password: 'dayOsuntsihatwir77@sql',
   database: 'CSProjectSystem'});
 
 // Promisify the query function
@@ -73,11 +73,11 @@ async function do_stuff() {
     await pcon.query('INSERT INTO Users (UserID, Fname, Lname, Email, Address, '+
       'is_utd, is_employee) VALUES (?, ?, ?, ?, ?, ?, ?)', // query
       // values to replace
-      [1, 'John', 'Doe', 'john@example.com', '100 Fake Street', true, false]); 
+      [1, 'John', 'Doe', 'john@example.com', '100 Fake Street', true, false]);
 
     // If an error occurs in the middle, we rollback all changes
     //throw 3;
-    
+
     // Other connections will receive a snapshot before transaction began, and
     // if some other transaction tries to modify User table, that will be
     // stalled until this ends... try to wait for a bit...
@@ -86,7 +86,7 @@ async function do_stuff() {
     await pcon.query('INSERT INTO UTD_Personnel (Uid, UType, NetID, isAdmin) ' +
       'VALUES (?, ?, ?, ?)', // query
       // values to replace
-      [1, user.UTDPersonnel.types.STUDENT, 'jnd170033', false]); 
+      [1, user.UTDPersonnel.types.STUDENT, 'jnd170033', false]);
 
     const results = (await pcon.query('SELECT * FROM Users')).result;
     console.log(results[0]); // Prints the first result
