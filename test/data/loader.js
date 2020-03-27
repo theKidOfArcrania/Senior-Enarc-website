@@ -26,6 +26,7 @@ let nextUid = 0;
 // Normalize USER entity
 for (const ent of db.USER) {
   ent.userId = nextUid;
+  nextUid ++;
   if (ent.isUtd) {
     db2.UTD_PERSONNEL[ent.userId] = ent.utd;
     delete ent.utd['uid'];
@@ -84,22 +85,22 @@ for (const ent of db.TEAM) {
  * Load the test sample data into a particular db instance
  * @param {Object} dbinst      the DB instance to load into
  */
-function loadIntoDB(dbinst) {
-  dbinst.clear();
+async function loadIntoDB(dbinst) {
+  await dbinst.clear();
   for (const u of db.USER) {
     const uid = u.userId;
-    dbinst.insertUserInfo(uid, u);
+    await dbinst.insertUserInfo(uid, u);
     if (u.isUtd) {
       const utd = db2.UTD_PERSONNEL[uid];
       dbinst.insertUTDInfo(uid, utd);
       switch (utd.uType) {
         case utypes.STUDENT:
-          dbinst.insertStudentInfo(uid, db2.STUDENT[uid]);
+          await dbinst.insertStudentInfo(uid, db2.STUDENT[uid]);
           break;
         case utypes.STAFF:
           break;
         case utypes.FACULTY:
-          dbinst.insertFacultyInfo(uid, db2.FACULTY[uid]);
+          await dbinst.insertFacultyInfo(uid, db2.FACULTY[uid]);
           break;
         default:
           assert.fail('bad uType');
@@ -107,7 +108,7 @@ function loadIntoDB(dbinst) {
     }
 
     if (u.isEmployee) {
-      dbinst.insertEmployeeInfo(uid, db2.EMPLOYEE[uid]);
+      await dbinst.insertEmployeeInfo(uid, db2.EMPLOYEE[uid]);
     }
   }
 
