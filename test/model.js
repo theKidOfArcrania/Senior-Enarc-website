@@ -179,5 +179,6 @@ describe('model', async function() {
     await sqlconn.connect();
     await sqlconn.clear();
   });
-  describe('mysql', verifyModel.bind(undefined, sqlconn));
+  this.timeout(30000);
+  describe('mysql', verifyModel.bind(this, sqlconn));
 });

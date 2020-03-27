@@ -80,6 +80,8 @@ for (const ent of db.TEAM) {
   const id = ent.tid.substr(1);
   ent.tid = id;
   db2.TEAM[id] = ent;
+  ent.assignedProj = null; // delete b/c of foreign key
+  ent.leader = null; // delete b/c of foreign key
   db2.FACULTY_OR_TEAM[id] = {
     teamId: id,
     isRegTeam: true,
@@ -95,6 +97,10 @@ async function loadIntoDB(dbinst) {
 
   for (const t of db.TEAM) {
     await dbinst.insertTeamInfo(t.tid, t);
+  }
+
+  for (const c of db.COMPANY) {
+    await dbinst.insertCompanyInfo(c.name, c);
   }
 
   for (const u of db.USER) {
