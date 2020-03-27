@@ -34,16 +34,19 @@ for (const ent of db.USER) {
       case utypes.STUDENT:
         delete ent.student['suid'];
         db2.STUDENT[ent.userId] = ent.student;
+        ent.student.memberOf = ent.student.memberOf.substr(1);
         break;
       case utypes.STAFF:
         break;
       case utypes.FACULTY:
         delete ent.faculty['fuid'];
+        const id = parseInt(ent.faculty.tid.substr(1)) + 100;
         db2.FACULTY[ent.userId] = ent.faculty;
-        db2.FACULTY_OR_TEAM[ent.faculty.tid] = {
-          teamId: ent.faculty.tid,
+        db2.FACULTY_OR_TEAM[id] = {
+          teamId: id,
           isRegTeam: false,
         };
+        ent.faculty.tid = id;
         break;
       default:
         assert.fail('bad uType');
@@ -74,9 +77,10 @@ for (const ent of db.COMPANY) {
 
 // Normalize TEAM
 for (const ent of db.TEAM) {
-  db2.TEAM[ent.tid] = ent;
-  db2.FACULTY_OR_TEAM[ent.tid] = {
-    teamId: ent.tid,
+  const id = ent.tid.substr(1);
+  db2.TEAM[id] = ent;
+  db2.FACULTY_OR_TEAM[id] = {
+    teamId: id,
     isRegTeam: true,
   };
 }
