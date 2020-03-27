@@ -78,6 +78,7 @@ for (const ent of db.COMPANY) {
 // Normalize TEAM
 for (const ent of db.TEAM) {
   const id = ent.tid.substr(1);
+  ent.tid = id;
   db2.TEAM[id] = ent;
   db2.FACULTY_OR_TEAM[id] = {
     teamId: id,
@@ -91,6 +92,11 @@ for (const ent of db.TEAM) {
  */
 async function loadIntoDB(dbinst) {
   await dbinst.clear();
+
+  for (const t of db.TEAM) {
+    await dbinst.insertTeamInfo(t.tid, t);
+  }
+
   for (const u of db.USER) {
     const uid = u.userId;
     await dbinst.insertUserInfo(uid, u);
