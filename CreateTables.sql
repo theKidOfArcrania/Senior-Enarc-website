@@ -4,7 +4,7 @@ create database CSProjectSystem;
 use CSProjectSystem;
 
 create table Users (
-	UserID int NOT NULL AUTO_INCREMENT,
+	UserID int NOT NULL,
     Fname varchar(50) NOT NULL,
     Lname varchar(50) NOT NULL,
     Email varchar(30) NOT NULL UNIQUE,
@@ -15,13 +15,13 @@ create table Users (
 );
 
 create table Faculty_Or_Team (
-	TeamID int AUTO_INCREMENT,
+	TeamID int,
     is_reg_team boolean,
     PRIMARY KEY (TeamID)
 );
 
 create table UTD_Personnel (
-	Uid int AUTO_INCREMENT,
+	Uid int,
     UType int NOT NULL,
     NetID varchar(10) NOT NULL,
     isAdmin boolean NOT NULL,
@@ -30,7 +30,7 @@ create table UTD_Personnel (
 );
 
 create table Faculty (
-	Fuid int AUTO_INCREMENT,
+	Fuid int,
     Tid int NOT NULL,
     PRIMARY KEY (Fuid),
     FOREIGN KEY (Fuid) references UTD_Personnel (Uid),
@@ -47,7 +47,7 @@ create table Student (
 );
 
 create table Project (
-	ProjID int AUTO_INCREMENT,
+	ProjID int,
     Pname varchar(50) NOT NULL,
     Image varchar(100),
     Project_document varchar(100),
@@ -90,7 +90,7 @@ create table Skills_Req (
 );
 
 create table Help_Ticket (
-	Hid int AUTO_INCREMENT,
+	Hid int,
     HStatus varchar(50),
     HDescription varchar(100),
     Requestor int,
