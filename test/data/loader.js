@@ -92,7 +92,7 @@ async function loadIntoDB(dbinst) {
     await dbinst.insertUserInfo(uid, u);
     if (u.isUtd) {
       const utd = db2.UTD_PERSONNEL[uid];
-      dbinst.insertUTDInfo(uid, utd);
+      await dbinst.insertUTDInfo(uid, utd);
       switch (utd.uType) {
         case utypes.STUDENT:
           await dbinst.insertStudentInfo(uid, db2.STUDENT[uid]);
