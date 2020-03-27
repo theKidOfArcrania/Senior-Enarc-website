@@ -21,8 +21,11 @@ db2 = {
   CHOICE: {}, HELP_TICKET: {},
 };
 
+let nextUid = 0;
+
 // Normalize USER entity
 for (const ent of db.USER) {
+  ent.userId = nextUid;
   if (ent.isUtd) {
     db2.UTD_PERSONNEL[ent.userId] = ent.utd;
     delete ent.utd['uid'];

@@ -32,7 +32,6 @@ function filter(fn) {
  */
 function verifyModel(model) {
   before(() => {
-    console.log('LOADING');
     return loader.loadIntoDB(model);
   });
   beforeEach(() => dbinst.inst = model);
@@ -173,6 +172,12 @@ describe('model', async function() {
     password: 'thisisasecurepassword',
     database: 'CSProjectSystem',
   });
-  await sqlconn.connect();
+  after(() => {
+    sqlconn.close();
+  });
+  before(async () => {
+    await sqlconn.connect();
+    await sqlconn.clear();
+  });
   describe('mysql', verifyModel.bind(undefined, sqlconn));
 });
