@@ -8,6 +8,7 @@
     "start": "node lib/server.js",
     "build": "echo build",
     "lint": "eslint --ignore-pattern '*.json' lib/** test/**",
+    "fixlint": "eslint --fix --ignore-pattern '*.json' lib/** test/**",
     "pretest": "npm run lint",
     "prebuild": "npm run test",
     "prestart": "npm run lint"

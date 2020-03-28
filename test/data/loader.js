@@ -9,8 +9,10 @@ for (const ent of ['COMPANY', 'PROJECT', 'TEAM', 'USER']) {
   db[ent] = JSON.parse(fs.readFileSync(`test/data/${ent}.json`, 'utf8'));
 }
 
+let nextUid = 0;
 uids = [];
 for (const u of db.USER) {
+  u.userId = nextUid++;
   uids.push(u.userId);
 }
 
@@ -21,12 +23,9 @@ db2 = {
   CHOICE: {}, HELP_TICKET: {},
 };
 
-let nextUid = 0;
 
 // Normalize USER entity
 for (const ent of db.USER) {
-  ent.userId = nextUid;
-  nextUid ++;
   if (ent.isUtd) {
     db2.UTD_PERSONNEL[ent.userId] = ent.utd;
     delete ent.utd['uid'];
@@ -34,7 +33,7 @@ for (const ent of db.USER) {
       case utypes.STUDENT:
         delete ent.student['suid'];
         db2.STUDENT[ent.userId] = ent.student;
-        ent.student.memberOf = ent.student.memberOf.substr(1);
+        ent.student.memberOf = parseInt(ent.student.memberOf.substr(1));
         break;
       case utypes.STAFF:
         break;
@@ -72,6 +71,7 @@ for (const ent of db.PROJECT) {
 }
 
 for (const ent of db.COMPANY) {
+  ent.manager = null; // delete b/c of foreign key
   db2.COMPANY[ent.name] = ent;
 }
 

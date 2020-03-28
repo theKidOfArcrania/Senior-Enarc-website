@@ -31,8 +31,8 @@ function filter(fn) {
  * @param {Object} model     the database model to test
  */
 function verifyModel(model) {
-  before(() => {
-    return loader.loadIntoDB(model);
+  before(async () => {
+    await loader.loadIntoDB(model);
   });
   beforeEach(() => dbinst.inst = model);
 
@@ -41,11 +41,11 @@ function verifyModel(model) {
     const utdFilt = filter((uu) => (uu.isUtd && uu.utd));
     const empFilt = filter((uu) => (uu.isEmployee && uu.employee));
     const stuFilt = utdFilt.then((utd) =>
-      (utd.uType == utypes.STUDENT && utd.student));
+      (utd.uType === utypes.STUDENT && utd.student));
     const facFilt = utdFilt.then((utd) =>
-      (utd.uType == utypes.FACULTY && utd.faculty));
+      (utd.uType === utypes.FACULTY && utd.faculty));
     const staffFilt = utdFilt.then((utd) =>
-      (utd.uType == utypes.STAFF && utd.staff));
+      (utd.uType === utypes.STAFF && utd.staff));
 
     /**
      * Iterate through each user, filtering/modifying each user based on the
@@ -80,9 +80,29 @@ function verifyModel(model) {
      */
     function checkType(filt, type) {
       return forEachUsersB(filt, (uid, val) => {
-        assert.equal(val.uid, uid);
-        assert.equal(val.constructor, type);
+        assert.strictEqual(val.uid, uid);
+        assert.strictEqual(val.constructor, type);
       });
+    }
+
+    /**
+     * Checks whether if there exists a user that fits this filter
+     * @param {Function} filt    the filter to set the view of the user object
+     * @return {Function} a function that checks existence
+     */
+    function exists(filt) {
+      return async function() {
+        pms = [];
+        for (const u of loader.users) {
+          let uu = new user.User(u);
+          pms.push(uu.reload().then((_) => {
+            uu = filt(uu);
+            if (uu) return 1;
+            else return 0;
+          }));
+        }
+        assert.notEqual(0, (await Promise.all(pms)).reduce((a, b) => a + b));
+      };
     }
 
     /**
@@ -97,7 +117,7 @@ function verifyModel(model) {
       for (const prop of should) {
         it(`should have .${prop}`, forEachUsersB(filter, (uid, u) => {
           assert(prop in u, `${prop} does not exist.`);
-          assert.equal(u[prop], table[uid][prop]);
+          assert.strictEqual(u[prop], table[uid][prop]);
         }));
       }
 
@@ -124,6 +144,7 @@ function verifyModel(model) {
     });
 
     describe('UTDPersonnel', function() {
+      it('should exist', exists(utdFilt));
       it('should have .student if uType = STUDENT',
           checkType(stuFilt, user.Student));
       it('should have .faculty if uType = FACULTY',
@@ -139,24 +160,28 @@ function verifyModel(model) {
     describe('Student', function() {
       const should = ['major', 'resume', 'memberOf', 'skills'];
       const maybe = ['uid'];
+      it('should exist', exists(stuFilt));
       checkUserProps(it, stuFilt, db2.STUDENT, should, maybe);
     });
 
     describe('Faculty', function() {
       const should = ['tid'];
       const maybe = ['uid'];
+      it('should exist', exists(facFilt));
       checkUserProps(it, facFilt, db2.FACULTY, should, maybe);
     });
 
     describe('Staff', function() {
       const should = [];
       const maybe = ['uid'];
+      it('should exist', exists(staffFilt));
       checkUserProps(it, staffFilt, db2.STAFF, should, maybe);
     });
 
     describe('Employee', function() {
       const should = ['worksAt', 'password'];
       const maybe = ['uid'];
+      it('should exist', exists(empFilt));
       checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
     });
   });
@@ -165,19 +190,20 @@ function verifyModel(model) {
 describe('model', async function() {
   const basic = new dbinst.Database();
   describe('basic', verifyModel.bind(undefined, basic));
+
   const sqlconn = new sqldb.SQLDatabase({
     //  Change Login Information as required
     host: 'localhost',
     user: 'dbuser',
     password: 'thisisasecurepassword',
     database: 'CSProjectSystem',
+    multipleStatements: true, // Only allow this for testing!!
+  });
+  before(async function() {
+    await sqlconn.connect();
   });
   after(() => {
     sqlconn.close();
-  });
-  before(async () => {
-    await sqlconn.connect();
-    await sqlconn.clear();
   });
   this.timeout(30000);
   describe('mysql', verifyModel.bind(this, sqlconn));
