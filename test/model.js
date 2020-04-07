@@ -185,6 +185,8 @@ function verifyModel(model) {
       checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
     });
   });
+
+  // TODO: insert test cases for properly loading other entities here
 };
 
 describe('model', async function() {
