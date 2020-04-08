@@ -120,8 +120,8 @@ create table HelpTicket (
   FOREIGN KEY (requestor) references Users (userID)
 );
 
-alter table student
+alter table Student
 add FOREIGN KEY (memberOf) references Team (tid) ON DELETE SET NULL;
 
-alter table company
+alter table Company
 add FOREIGN KEY (manager) references Employee(euid) ON DELETE SET NULL;
