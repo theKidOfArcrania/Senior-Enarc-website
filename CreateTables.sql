@@ -73,7 +73,7 @@ create table Project (
   sponsor int NOT NULL,
   advisor int NOT NULL,
   status varchar(15) NOT NULL,
-  Is_visible boolean NOT NULL,
+  visible boolean NOT NULL,
   PRIMARY KEY (projID),
   FOREIGN KEY (mentor) references Users (userID),
   FOREIGN KEY (sponsor) references Users (userID),

@@ -210,3 +210,5 @@ describe('model', async function() {
   this.timeout(30000);
   describe('mysql', verifyModel.bind(this, sqlconn));
 });
+
+//TODO: test partial updates
