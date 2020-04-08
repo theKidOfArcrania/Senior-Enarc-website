@@ -4,6 +4,7 @@ orbs:
 jobs:
   build-and-test:
     docker:
+      - image: circleci/node:latest
       - image: circleci/mysql:8.0.4
         environment:
           MYSQL_ROOT_PASSWORD: rootpw
@@ -14,8 +15,6 @@ jobs:
       name: node/default
     steps:
       - checkout
-      - node/install:
-          node-version: latest
       - node/with-cache:
           steps:
             - run: cp lib/config.js.def lib/config.js
