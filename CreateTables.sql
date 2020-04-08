@@ -95,9 +95,9 @@ create table team (
 
 create table choice (
 	tid int NOT NULL,
-  pRank int NOT NULL,
+  rank int NOT NULL,
   pid int,
-  PRIMARY KEY (tid, pRank),
+  PRIMARY KEY (tid, rank),
   FOREIGN KEY (tid) references facultyOrTeam (teamID)
     ON UPDATE CASCADE ON DELETE CASCADE,
   FOREIGN KEY (pid) references project (projID)
