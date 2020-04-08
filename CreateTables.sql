@@ -84,7 +84,7 @@ create table Team (
 	tid int,
   assignedProj int,
   budget int NOT NULL,
-  Leader int,
+  leader int,
   PRIMARY KEY (tid),
   FOREIGN KEY (assignedProj) references Project (ProjID) 
     ON UPDATE CASCADE ON DELETE SET NULL,

@@ -25,6 +25,18 @@ function filter(fn) {
   return fn;
 }
 
+/**
+ * Asserts that the expected list equals the actual list, after disregarding
+ * order of elements
+ * @param {String[]} actual      the actual elements found
+ * @param {String[]} expected    the expected elements
+ */
+function equalsList(actual, expected) {
+  const act = Array.prototype.slice.call(actual).sort();
+  const exp = Array.prototype.slice.call(expected).sort();
+  assert.deepStrictEqual(act, exp);
+}
+
 
 /**
  * This verifies that a DB model is correct and valid.
@@ -117,7 +129,11 @@ function verifyModel(model) {
       for (const prop of should) {
         it(`should have .${prop}`, forEachUsersB(filter, (uid, u) => {
           assert(prop in u, `${prop} does not exist.`);
-          assert.strictEqual(u[prop], table[uid][prop]);
+          if (should[prop] instanceof Array) {
+            equalsList(u[prop], table[uid][prop]);
+          } else {
+            assert.strictEqual(u[prop], table[uid][prop]);
+          }
         }));
       }
 
@@ -184,7 +200,37 @@ function verifyModel(model) {
       it('should exist', exists(empFilt));
       checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
     });
+
+    describe('Email searches', function() {
+      it('should get userID from valid email', async function() {
+        const uid = (await model.searchUserByEmail('pvanarsdalld@smh.com.au'));
+        assert.strictEqual(uid, 13);
+      });
+
+      // NOTE THAT case unsensitivity/sEnsitivity is undefined
+
+      it('should get invalid userID from invalid email', async function() {
+        const uid = (await model.searchUserByEmail('pvanarsdalld@smh.com.auu'));
+        assert.strictEqual(uid, -1);
+      });
+    });
+
+    describe('Team members', function() {
+      it('should contain all students', async function() {
+        const ids = await model.findMembersOfTeam(39);
+        equalsList([0, 3], ids);
+      });
+      it('or return empty list', async function() {
+        const ids = await model.findMembersOfTeam(42);
+        equalsList([], ids);
+      });
+      it('invalid teams return empty list', async function() {
+        const ids = await model.findMembersOfTeam(1337);
+        equalsList([], ids);
+      });
+    });
   });
+
 
   // TODO: insert test cases for properly loading other entities here
 };
