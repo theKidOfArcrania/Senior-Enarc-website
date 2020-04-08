@@ -211,4 +211,4 @@ describe('model', async function() {
   describe('mysql', verifyModel.bind(this, sqlconn));
 });
 
-//TODO: test partial updates
+// TODO: test partial updates
