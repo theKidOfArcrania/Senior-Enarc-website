@@ -3,12 +3,22 @@ orbs:
   node: circleci/node@1.1.6
 jobs:
   build-and-test:
+    docker:
+      - image: circleci/mysql:8.0.4
+        environment:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: CSProjectSystem
+          MYSQL_USER: dbuser
+          MYSQL_PASSWORD: thisisasecurepassword
     executor:
       name: node/default
     steps:
       - checkout
+      - node/install:
+          node-version: latest
       - node/with-cache:
           steps:
+            - run: cp lib/config.js.def lib/config.js
             - run: npm install
             - run: npm test
 workflows:
