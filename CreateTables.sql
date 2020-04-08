@@ -1,15 +1,15 @@
-drop database if exists CSProjectSystem;
-create database CSProjectSystem;
+drop database if exists csProjectSystem;
+create database csProjectSystem;
 
-use CSProjectSystem;
+use csProjectSystem;
 
-create table Company (
+create table company (
   name varchar(50) NOT NULL,
   logo varchar(100) NOT NULL,
   manager int,
   PRIMARY KEY (name)
 ); 
-create table Users (
+create table users (
 	userId int NOT NULL,
   fname varchar(50) NOT NULL,
   lname varchar(50) NOT NULL,
@@ -20,50 +20,50 @@ create table Users (
   PRIMARY KEY (userId)
 );
 
-create table Employee (
-  Euid int NOT NULL,
+create table employee (
+  euid int NOT NULL,
   worksAt varchar(50) NOT NULL,
   password varchar(100) NOT NULL,
-  PRIMARY KEY (Euid),
-  FOREIGN KEY (Euid) references Users(UserId) ON UPDATE CASCADE ON DELETE CASCADE,
-  FOREIGN KEY (worksAt) references Company(name) ON UPDATE CASCADE
+  PRIMARY KEY (euid),
+  FOREIGN KEY (euid) references users(userId) ON UPDATE CASCADE ON DELETE CASCADE,
+  FOREIGN KEY (worksAt) references company(name) ON UPDATE CASCADE
 );
 
-create table Faculty_Or_Team (
-	TeamID int,
-  is_reg_team boolean,
-  PRIMARY KEY (TeamID)
+create table facultyOrTeam (
+	teamID int,
+  isRegTeam boolean,
+  PRIMARY KEY (teamID)
 );
 
-create table UTD_Personnel (
-	Uid int,
+create table utdPersonnel (
+	uid int,
   uType int NOT NULL,
   netID varchar(10) NOT NULL,
   isAdmin boolean NOT NULL,
-  PRIMARY KEY (Uid),
-  FOREIGN KEY (Uid) references Users (UserID) ON UPDATE CASCADE ON DELETE CASCADE
+  PRIMARY KEY (uid),
+  FOREIGN KEY (uid) references users (userID) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-create table Faculty (
-	Fuid int,
+create table faculty (
+	fuid int,
   tid int NOT NULL,
-  PRIMARY KEY (Fuid),
-  FOREIGN KEY (Fuid) references UTD_Personnel (Uid) ON DELETE CASCADE 
+  PRIMARY KEY (fuid),
+  FOREIGN KEY (fuid) references utdPersonnel (uid) ON DELETE CASCADE 
     ON UPDATE CASCADE,
-  FOREIGN KEY (tid) references Faculty_Or_Team (TeamID)
+  FOREIGN KEY (tid) references facultyOrTeam (teamID)
 );
 
-create table Student (
-	Suid int,
+create table student (
+	suid int,
   major varchar(30) NOT NULL,
   resume varchar(100),
   memberOf int,
-  PRIMARY KEY (Suid),
-  FOREIGN KEY (Suid) references UTD_Personnel (Uid) 
+  PRIMARY KEY (suid),
+  FOREIGN KEY (suid) references utdPersonnel (uid) 
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-create table Project (
+create table project (
 	projID int,
   pName varchar(50) NOT NULL,
   image varchar(100),
@@ -73,55 +73,55 @@ create table Project (
   sponsor int NOT NULL,
   advisor int NOT NULL,
   status varchar(15) NOT NULL,
-  Is_visible boolean NOT NULL,
+  isVisible boolean NOT NULL,
   PRIMARY KEY (projID),
-  FOREIGN KEY (mentor) references Users (userID),
-  FOREIGN KEY (sponsor) references Users (userID),
-  FOREIGN KEY (advisor) references Faculty (Fuid)
+  FOREIGN KEY (mentor) references users (userID),
+  FOREIGN KEY (sponsor) references users (userID),
+  FOREIGN KEY (advisor) references faculty (fuid)
 );
 
-create table Team (
+create table team (
 	tid int,
   assignedProj int,
   budget int NOT NULL,
-  Leader int,
+  leader int,
   PRIMARY KEY (tid),
-  FOREIGN KEY (assignedProj) references Project (ProjID) 
+  FOREIGN KEY (assignedProj) references project (projID) 
     ON UPDATE CASCADE ON DELETE SET NULL,
-  FOREIGN KEY (leader) references Student (Suid)
+  FOREIGN KEY (leader) references student (suid)
     ON UPDATE CASCADE ON DELETE SET NULL
 );
 
-create table Choice (
-	Tid int NOT NULL,
-  PRank int NOT NULL,
-  Pid int,
-  PRIMARY KEY (Tid, PRank),
-  FOREIGN KEY (Tid) references Faculty_Or_Team (TeamID)
+create table choice (
+	tid int NOT NULL,
+  pRank int NOT NULL,
+  pid int,
+  PRIMARY KEY (tid, pRank),
+  FOREIGN KEY (tid) references facultyOrTeam (teamID)
     ON UPDATE CASCADE ON DELETE CASCADE,
-  FOREIGN KEY (Pid) references Project (ProjID)
+  FOREIGN KEY (pid) references project (projID)
     ON UPDATE CASCADE ON DELETE SET NULL
 );
 
-create table Skills_Req (
-	Pid int,
-  Skill_Name varchar(50),
-	PRIMARY KEY (Pid, Skill_Name),
-  FOREIGN KEY (Pid) references Project (ProjID)
+create table skillsReq (
+	pid int,
+  skillName varchar(50),
+	PRIMARY KEY (pid, skillName),
+  FOREIGN KEY (pid) references project (projID)
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-create table Help_Ticket (
-	Hid int,
-  HStatus varchar(50),
-  HDescription varchar(100),
-  Requestor int,
-  PRIMARY KEY (Hid),
-  FOREIGN KEY (Requestor) references Users (UserID)
+create table helpTicket (
+	hid int,
+  hStatus varchar(50),
+  hDescription varchar(100),
+  requestor int,
+  PRIMARY KEY (hid),
+  FOREIGN KEY (requestor) references users (userID)
 );
 
-alter table Student
-add FOREIGN KEY (memberOf) references Team (Tid) ON DELETE SET NULL;
+alter table student
+add FOREIGN KEY (memberOf) references team (tid) ON DELETE SET NULL;
 
-alter table Company
-add FOREIGN KEY (Manager) references Employee(Euid) ON DELETE SET NULL;
+alter table company
+add FOREIGN KEY (manager) references employee(euid) ON DELETE SET NULL;
