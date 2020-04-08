@@ -1,11 +1,12 @@
 import requests
 import json
+import hashlib
 
 base_url = 'http://localhost:3000/api'
 
 emp_creds = {
     'email': 'adowley0@myspace.com',
-    'password': '1893ab19c30d2b4f39a91d514e558f7beb8e4a40ee103024afc56d43c92e4902', 
+    'password': hashlib.sha256(b'password').hexdigest(), 
 }
 
 def login(sess, creds):
