@@ -44,6 +44,7 @@ function equalsList(actual, expected) {
  */
 function verifyModel(model) {
   before(async () => {
+    await model.beginTransaction();
     await loader.loadIntoDB(model);
   });
   beforeEach(() => dbinst.inst = model);
