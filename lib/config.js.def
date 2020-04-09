@@ -15,4 +15,10 @@ module.exports = {
     port: 3000,
     host: 'localhost',
   },
+  SQLCREDS: {
+    host: 'localhost',
+    user: 'dbuser',
+    password: 'thisisasecurepassword',
+    database: 'CSProjectSystem',
+  },
 };
