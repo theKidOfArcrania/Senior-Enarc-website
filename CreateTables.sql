@@ -63,6 +63,14 @@ create table Student (
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+create table Skills (
+  stuUID int,
+  skill varchar(50) NOT NULL,
+  primary key (stuUID),
+  foreign key (stuUID) references Student (suid)
+    ON UPDATE CASCADE ON DELETE CASCADE
+);
+
 create table Project (
 	projID int,
   pName varchar(50) NOT NULL,
