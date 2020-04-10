@@ -128,6 +128,10 @@ async function loadIntoDB(dbinst) {
     }
   }
 
+  for (const p of db.PROJECT) {
+    await dbinst.insertProjectInfo(p.projID, p);
+  }
+
   // TODO: insert projects and other stuff
 }
 

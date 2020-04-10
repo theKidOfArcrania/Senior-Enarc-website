@@ -2,6 +2,8 @@ const assert = require('assert');
 const user = require('../lib/model/user.js');
 const dbinst = require('../lib/model/db.js');
 const sqldb = require('../lib/model/sqldb.js');
+const util = require('../lib/util.js');
+const fs = require('fs').promises;
 
 const utypes = user.UTDPersonnel.types;
 
@@ -25,6 +27,46 @@ function filter(fn) {
   return fn;
 }
 
+
+/**
+ * Overlays the actual tables with memory temporary tables to allow for quicker
+ * inserts/queries rather than reading to underlying disk.
+ * @param {Connection} pconn     the underlying SQL connection
+ */
+async function sqlCreateTempTables(pconn) {
+  const stmts = (await fs.readFile('./CreateTables.sql',
+      {encoding: 'utf8'})).split(';');
+
+  for (let st of stmts) {
+    st = st.trim();
+    if (!st) continue;
+    if (st.toUpperCase().startsWith('USE')) continue;
+    if (st.toUpperCase().startsWith('DROP DATABASE')) continue;
+    if (st.toUpperCase().startsWith('CREATE DATABASE')) continue;
+    if (st.toUpperCase().startsWith('CREATE TABLE')) {
+      st = st.replace(/CREATE TABLE/i, 'CREATE TEMPORARY TABLE');
+
+      // Strip foreign key constraints
+      const flds = [];
+      let lastRemoved = false;
+      for (const fld of st.split(',')) {
+        if (fld.trim().toUpperCase().startsWith('FOREIGN KEY')) {
+          lastRemoved = true;
+        } else {
+          flds.push(fld);
+          lastRemoved = false;
+        }
+      }
+      st = flds.join(',');
+      if (lastRemoved) st += ')';
+    }
+    if (st.toUpperCase().startsWith('ALTER TABLE')) {
+      if (st.toUpperCase().includes('FOREIGN KEY')) continue;
+    }
+    await pconn.query(st);
+  }
+}
+
 /**
  * Asserts that the expected list equals the actual list, after disregarding
  * order of elements
@@ -43,18 +85,16 @@ function equalsList(actual, expected) {
  * @param {Object} model     the database model to test
  */
 function verifyModel(model) {
+  before(async function() {
+    this.timeout(30000);
+    model.beginTransaction();
+    await loader.loadIntoDB(model);
+    model.commit();
+  });
+
+  beforeEach(() => dbinst.inst = model);
+
   describe('query', function() {
-    before(async function() {
-      this.timeout(30000);
-      await model.beginTransaction();
-      await loader.loadIntoDB(model);
-    });
-    after(async function() {
-      await model.rollback();
-    });
-
-    beforeEach(() => dbinst.inst = model);
-
     describe('user', function() {
       // Various filters to see different views of a user
       const utdFilt = filter((uu) => (uu.isUtd && uu.utd));
@@ -136,7 +176,8 @@ function verifyModel(model) {
         for (const prop of should) {
           it(`should have .${prop}`, forEachUsersB(filter, (uid, u) => {
             assert(prop in u, `${prop} does not exist.`);
-            if (should[prop] instanceof Array) {
+
+            if (util.isArray(u[prop])) {
               equalsList(u[prop], table[uid][prop]);
             } else {
               assert.strictEqual(u[prop], table[uid][prop]);
@@ -242,54 +283,64 @@ function verifyModel(model) {
   });
 
   describe('update', function() {
-    let hid;
-    before(async function() {
-      this.timeout(30000);
-      await model.beginTransaction();
-      await loader.loadIntoDB(model);
+    const alters = [
+      ['Company', 'Shufflebeat', {logo: 'abcde'}],
+      ['Employee', 1, {password: 'abcde'}],
+      ['Faculty', 1, {tid: 102}],
+      ['HelpTicket', 1337, {requestor: 1}],
+      ['Project', 1, {advisor: 1}],
+      ['Student', 0, {major: 'no nonsense'}],
+      ['Team', 1, {leader: 0}],
+      ['UTD', 1, {isAdmin: true}],
+      ['User', 0, {fname: 'John'}],
+    ];
 
-      hid = await model.findUniqueID('HelpTicket');
-      await model.insertHelpTicketInfo(hid, {
+    before(async function() {
+      await model.insertHelpTicketInfo(1337, {
         hStatus: 'Testing',
         hDescription: 'I\'m a dinosaur',
         requestor: 0,
       });
     });
 
-    after(async function() {
-      await model.rollback();
-    });
-
-    alters = [
-      ['Company', 'Shufflebeat', {logo: 'abcde'}],
-      ['Employee', 1, {password: 'abcde'}],
-      ['Faculty', 1, {tid: 102}],
-      ['HelpTicket', hid, {requestor: 1}],
-      ['Project', 0, {advisor: 1}],
-      ['Student', 0, {advisor: 1}],
-      ['Team', 0, {leader: 0}],
-      ['UTD', 1, {isAdmin: true}],
-      ['User', 0, {fname: 'John'}],
-    ];
-
     for (const [mth, uid, changes] of alters) {
+      const load = `load${mth}Info`;
+      const alter = `alter${mth}Info`;
+
       describe(mth, function() {
         it('can partial update', async function() {
-          const init = Object.assign({},
-              await model['load' + mth + 'Info'](uid));
-          await model['alter' + mth + 'Info'](uid, changes);
-          const after = Object.assign({},
-              await model['load' + mth + 'Info'](uid));
-
-          Object.assign(init, changes);
-          assert.deepStrictEqual(after, init);
-        });
-        it('should error on invalid ID', async function() {
+          await model.beginTransaction();
           try {
-            await model['alter' + mth + 'Info'](1337, changes);
-          } catch (e) {
-            if (e.constructor !== Error) throw e;
-            assert(e.message.includes('No match'), 'Invalid error message');
+            const init = Object.assign({}, await model[load](uid));
+            assert(await model[alter](uid, changes), 'No changes made!');
+            const after = Object.assign({}, await model[load](uid));
+
+            Object.assign(init, changes);
+            assert.deepStrictEqual(after, init);
+          } finally {
+            await model.rollback();
+          }
+        });
+        it('should not change if invalid ID', async function() {
+          await model.beginTransaction();
+          try {
+            const init = Object.assign({}, await model[load](uid));
+            assert(!(await model[alter](31337, changes)), 'Changes made!');
+            const after = Object.assign({}, await model[load](uid));
+            assert.deepStrictEqual(after, init);
+          } finally {
+            await model.rollback();
+          }
+        });
+        it('should not change if invalid fields', async function() {
+          await model.beginTransaction();
+          try {
+            const init = Object.assign({}, await model[load](uid));
+            assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
+            const after = Object.assign({}, await model[load](uid));
+            assert.deepStrictEqual(after, init);
+          } finally {
+            await model.rollback();
           }
         });
       });
@@ -300,8 +351,9 @@ function verifyModel(model) {
 };
 
 describe('model', async function() {
-  const basic = new dbinst.Database();
-  describe('basic', verifyModel.bind(undefined, basic));
+  // TODO: reenable testing for basic model!
+  // const basic = new dbinst.Database();
+  // describe('basic', verifyModel.bind(undefined, basic));
 
   const sqlconn = new sqldb.SQLDatabase({
     //  Change Login Information as required
@@ -312,7 +364,9 @@ describe('model', async function() {
     multipleStatements: true, // Only allow this for testing!!
   });
   before(async function() {
+    this.timeout(30000);
     await sqlconn.connect();
+    await sqlCreateTempTables(sqlconn.pcon);
   });
   after(() => {
     sqlconn.close();

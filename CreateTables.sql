@@ -79,7 +79,7 @@ create table Project (
   pDesc varchar(1000),
   mentor int NOT NULL,
   sponsor int NOT NULL,
-  advisor int NOT NULL,
+  advisor int,
   status varchar(15) NOT NULL,
   visible boolean NOT NULL,
   PRIMARY KEY (projID),
