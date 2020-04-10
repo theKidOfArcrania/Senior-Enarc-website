@@ -27,11 +27,18 @@ def logout(sess):
     res = json.loads(sess.post(base_url + '/logout').content)
     print(res['msg'])
 
-
+def upload(sess, data, fname):
+    res = json.loads(sess.post(base_url + '/upload', files={'file': (fname,
+        data)}).content)
+    print(res['msg'])
+    print(res['body']['name'])
+    
 def main():
     sess = requests.Session()
     assert login(sess, emp_creds)
     assert checksess(sess);
+
+    upload(sess, 'hello!', '/hey/h2@!#$%^%$#34535645647*&^(&*68elloword;\'F:"S"')
 
     logout(sess);
     assert not checksess(sess);
