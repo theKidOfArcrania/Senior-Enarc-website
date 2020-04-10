@@ -38,7 +38,7 @@ def main():
     assert login(sess, emp_creds)
     assert checksess(sess);
 
-    upload(sess, 'hello!', '/hey/h2@!#$%^%$#34535645647*&^(&*68elloword;\'F:"S"')
+    upload(sess, 'hello!', '/hey/h2@!#$%^%$#34535645word;\'F:"S".png')
 
     logout(sess);
     assert not checksess(sess);
