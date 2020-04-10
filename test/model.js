@@ -7,6 +7,7 @@ const fs = require('fs').promises;
 
 const utypes = user.UTDPersonnel.types;
 
+const config = require('../lib/config.js');
 const loader = require('./data/loader.js');
 
 const db2 = loader.db;
@@ -356,14 +357,10 @@ describe('model', async function() {
   // const basic = new dbinst.Database();
   // describe('basic', verifyModel.bind(undefined, basic));
 
-  const sqlconn = new sqldb.SQLDatabase({
-    //  Change Login Information as required
-    host: 'localhost',
-    user: 'dbuser',
-    password: 'thisisasecurepassword',
-    database: 'CSProjectSystem',
-    multipleStatements: true, // Only allow this for testing!!
-  });
+  // Only allow this for testing
+  config.SQLCREDS.multipleStatements = true;
+
+  const sqlconn = new sqldb.SQLDatabase(config.SQLCREDS);
   before(async function() {
     this.timeout(30000);
     await sqlconn.connect();
