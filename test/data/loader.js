@@ -33,7 +33,9 @@ for (const ent of db.USER) {
       case utypes.STUDENT:
         delete ent.student['suid'];
         db2.STUDENT[ent.userId] = ent.student;
-        ent.student.memberOf = parseInt(ent.student.memberOf.substr(1));
+        if (ent.student.memberOf !== null) {
+          ent.student.memberOf = parseInt(ent.student.memberOf.substr(1));
+        }
         break;
       case utypes.STAFF:
         break;
@@ -84,7 +86,7 @@ for (const ent of db.COMPANY) {
 
 // Normalize TEAM
 for (const ent of db.TEAM) {
-  const id = ent.tid.substr(1);
+  const id = parseInt(ent.tid.substr(1));
   ent.tid = id;
   db2.TEAM[id] = ent;
   ent.assignedProj = null; // delete b/c of foreign key

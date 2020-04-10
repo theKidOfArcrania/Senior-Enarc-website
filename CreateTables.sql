@@ -90,7 +90,7 @@ create table Project (
 
 create table Team (
 	tid int,
-  assignedProj int,
+  assignedProj int NULL UNIQUE,
   budget int NOT NULL,
   leader int,
   PRIMARY KEY (tid),
