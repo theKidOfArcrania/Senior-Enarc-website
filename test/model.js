@@ -325,7 +325,8 @@ function verifyModel(model) {
           await model.beginTransaction();
           try {
             const init = Object.assign({}, await model[load](uid));
-            assert(!(await model[alter](31337, changes)), 'Changes made!');
+            const bad = (util.isNumber(uid) ? 31337 : '31337');
+            assert(!(await model[alter](bad, changes)), 'Changes made!');
             const after = Object.assign({}, await model[load](uid));
             assert.deepStrictEqual(after, init);
           } finally {
