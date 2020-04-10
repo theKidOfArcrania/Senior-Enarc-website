@@ -65,9 +65,16 @@ for (const ent of db.USER) {
   db2.USER[ent.userId] = ent;
 }
 
+emps = Object.keys(db2.EMPLOYEE);
+faculties = Object.keys(db2.FACULTY);
+randEle = (lst) => lst[Math.floor(Math.random() * lst.length)];
+
 // Set primary key on PROJECT + COMPANY
 for (const ent of db.PROJECT) {
-  db2.PROJECT[ent.projId] = ent;
+  db2.PROJECT[ent.projID] = ent;
+  ent.mentor = ent.mentor && randEle(emps);
+  ent.sponsor = ent.sponsor && randEle(emps);
+  ent.advisor = ent.advisor && randEle(faculties);
 }
 
 for (const ent of db.COMPANY) {
@@ -126,6 +133,10 @@ async function loadIntoDB(dbinst) {
     if (u.isEmployee) {
       await dbinst.insertEmployeeInfo(uid, db2.EMPLOYEE[uid]);
     }
+  }
+
+  for (const p of db.PROJECT) {
+    await dbinst.insertProjectInfo(p.projID, p);
   }
 
   // TODO: insert projects and other stuff

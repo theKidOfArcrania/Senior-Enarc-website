@@ -8,7 +8,7 @@ create table Company (
   logo varchar(100) NOT NULL,
   manager int,
   PRIMARY KEY (name)
-); 
+);
 create table Users (
 	userId int NOT NULL,
   fname varchar(50) NOT NULL,
@@ -48,7 +48,7 @@ create table Faculty (
 	fuid int,
   tid int NOT NULL,
   PRIMARY KEY (fuid),
-  FOREIGN KEY (fuid) references UTDPersonnel (uid) ON DELETE CASCADE 
+  FOREIGN KEY (fuid) references UTDPersonnel (uid) ON DELETE CASCADE
     ON UPDATE CASCADE,
   FOREIGN KEY (tid) references FacultyOrTeam (teamID)
 );
@@ -59,7 +59,15 @@ create table Student (
   resume varchar(100),
   memberOf int,
   PRIMARY KEY (suid),
-  FOREIGN KEY (suid) references UTDPersonnel (uid) 
+  FOREIGN KEY (suid) references UTDPersonnel (uid)
+    ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+create table Skills (
+  stuUID int,
+  skill varchar(50) NOT NULL,
+  primary key (stuUID, skill),
+  foreign key (stuUID) references Student (suid)
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -71,7 +79,7 @@ create table Project (
   pDesc varchar(1000),
   mentor int NOT NULL,
   sponsor int NOT NULL,
-  advisor int NOT NULL,
+  advisor int,
   status varchar(15) NOT NULL,
   visible boolean NOT NULL,
   PRIMARY KEY (projID),
@@ -86,7 +94,7 @@ create table Team (
   budget int NOT NULL,
   leader int,
   PRIMARY KEY (tid),
-  FOREIGN KEY (assignedProj) references Project (projID) 
+  FOREIGN KEY (assignedProj) references Project (projID)
     ON UPDATE CASCADE ON DELETE SET NULL,
   FOREIGN KEY (leader) references Student (suid)
     ON UPDATE CASCADE ON DELETE SET NULL
