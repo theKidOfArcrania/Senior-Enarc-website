@@ -44,6 +44,7 @@ function equalsList(actual, expected) {
  */
 function verifyModel(model) {
   before(async () => {
+    await model.beginTransaction();
     await loader.loadIntoDB(model);
   });
   beforeEach(() => dbinst.inst = model);
@@ -155,7 +156,7 @@ function verifyModel(model) {
 
       const should = ['fname', 'lname', 'email', 'address', 'isUtd',
         'isEmployee', 'userId'];
-      const maybe = ['employee', 'utd', 'uid'];
+      const maybe = ['employee', 'utd', 'uid', 'teams'];
       checkUserProps(it, (x) => x, db2.USER, should, maybe);
     });
 
@@ -211,7 +212,7 @@ function verifyModel(model) {
 
       it('should get invalid userID from invalid email', async function() {
         const uid = (await model.searchUserByEmail('pvanarsdalld@smh.com.auu'));
-        assert.strictEqual(uid, -1);
+        assert.strictEqual(uid, null);
       });
     });
 
