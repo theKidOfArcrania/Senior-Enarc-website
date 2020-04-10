@@ -31,4 +31,5 @@ module.exports = {
   },
   UPLOAD_PATH: './upload',
   UPLOAD_IDS: './upload/ids',
+  TESTING: false,
 };

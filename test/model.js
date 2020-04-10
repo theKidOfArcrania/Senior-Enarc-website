@@ -1,3 +1,6 @@
+const config = require('../lib/config.js');
+config.TESTING = true;
+
 const assert = require('assert');
 const user = require('../lib/model/user.js');
 const dbinst = require('../lib/model/db.js');
@@ -7,7 +10,6 @@ const fs = require('fs').promises;
 
 const utypes = user.UTDPersonnel.types;
 
-const config = require('../lib/config.js');
 const loader = require('./data/loader.js');
 
 const db2 = loader.db;
