@@ -203,7 +203,7 @@ function verifyModel(model) {
 
         const should = ['fname', 'lname', 'email', 'address', 'isUtd',
           'isEmployee', 'userId'];
-        const maybe = ['employee', 'utd', 'uid'];
+        const maybe = ['employee', 'utd', 'uid', 'teams'];
         checkUserProps(it, (x) => x, db2.USER, should, maybe);
       });
 
@@ -234,7 +234,7 @@ function verifyModel(model) {
         it('should exist', exists(facFilt));
         checkUserProps(it, facFilt, db2.FACULTY, should, maybe);
       });
-      
+
       describe('Staff', function() {
         const should = [];
         const maybe = ['uid'];
