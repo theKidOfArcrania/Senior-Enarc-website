@@ -288,7 +288,7 @@ function verifyModel(model) {
           try {
             await model['alter' + mth + 'Info'](1337, changes);
           } catch (e) {
-            assert.strictEqual(e.constructor, Error);
+            if (e.constructor !== Error) throw e;
             assert(e.message.includes('No match'), 'Invalid error message');
           }
         });
