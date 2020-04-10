@@ -1,3 +1,4 @@
+/* vim: set ft=javascript: */
 module.exports = {
   BCRYPT_ROUNDS: 12,
   SESSION_CONFIG: {
@@ -15,4 +16,19 @@ module.exports = {
     port: 3000,
     host: 'localhost',
   },
+  SQLCREDS: {
+    host: 'localhost',
+    user: 'dbuser',
+    password: 'thisisasecurepassword',
+    database: 'CSProjectSystem',
+  },
+  UPLOAD: {
+    limits: {fileSize: 50 * 1024 * 1024}, // 50 MB
+    debug: true,
+    abortOnLimit: true,
+    createParentPath: true,
+    tempFileDir: '/tmp',
+  },
+  UPLOAD_PATH: './upload',
+  UPLOAD_IDS: './upload/ids',
 };
