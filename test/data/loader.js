@@ -36,7 +36,7 @@ async function loadIntoDB(dbinst) {
   await dbinst.clear();
   for (const [tbl, name, pkey] of tables) {
     for (const ent of ents[tbl]) {
-      await dbinst['insert' + name + 'Info'](ent[pkey], ent);
+      await dbinst['insert' + name + 'Info'](ent[pkey], Object.assign({}, ent));
     }
   }
 }
