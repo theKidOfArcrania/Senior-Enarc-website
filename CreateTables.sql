@@ -93,6 +93,7 @@ create table Team (
   assignedProj int NULL UNIQUE,
   budget int NOT NULL,
   leader int,
+  password varchar(100),
   PRIMARY KEY (tid),
   FOREIGN KEY (assignedProj) references Project (projID)
     ON UPDATE CASCADE ON DELETE SET NULL,
