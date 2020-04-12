@@ -154,16 +154,15 @@ function verifyModel(model) {
        */
       function exists(filt) {
         return async function() {
-          pms = [];
-          for (const u of loader.users) {
-            let uu = new user.User(u);
-            pms.push(uu.reload().then((_) => {
-              uu = filt(uu);
-              if (uu) return 1;
-              else return 0;
-            }));
-          }
-          assert.notEqual(0, (await Promise.all(pms)).reduce((a, b) => a + b));
+          pms = loader.users.map(async (u) => {
+            u = new user.User(u);
+            await u.reload();
+            u = filt(u);
+            if (u) return 1;
+            else return 0;
+          });
+          assert.notEqual(0, (await Promise.all(pms)).reduce(
+              (a, b) => a + b, 0));
         };
       }
 
@@ -181,9 +180,9 @@ function verifyModel(model) {
             assert(prop in u, `${prop} does not exist.`);
 
             if (util.isArray(u[prop])) {
-              equalsList(u[prop], table[uid][prop]);
+              equalsList(u[prop], table.get(uid)[prop]);
             } else {
-              assert.strictEqual(u[prop], table[uid][prop]);
+              assert.strictEqual(u[prop], table.get(uid)[prop]);
             }
           }));
         }
@@ -264,7 +263,7 @@ function verifyModel(model) {
         it('should get invalid userID from invalid email', async function() {
           const uid = (await model.searchUserByEmail(
               'pvanarsdalld@smh.com.auu'));
-          assert.strictEqual(uid, -1);
+          assert.strictEqual(uid, null);
         });
       });
 
@@ -290,7 +289,7 @@ function verifyModel(model) {
       ['Company', 'Shufflebeat', {logo: 'abcde'}],
       ['Employee', 1, {password: 'abcde'}],
       ['Faculty', 1, {tid: 102}],
-      ['HelpTicket', 1337, {requestor: 1}],
+      ['HelpTicket', 1, {requestor: 1}],
       ['Project', 1, {advisor: 1}],
       ['Student', 0, {major: 'no nonsense'}],
       ['Team', 1, {leader: 0}],
@@ -299,11 +298,6 @@ function verifyModel(model) {
     ];
 
     before(async function() {
-      await model.insertHelpTicketInfo(1337, {
-        hStatus: 'Testing',
-        hDescription: 'I\'m a dinosaur',
-        requestor: 0,
-      });
     });
 
     for (const [mth, uid, changes] of alters) {
@@ -328,7 +322,7 @@ function verifyModel(model) {
           await model.beginTransaction();
           try {
             const init = Object.assign({}, await model[load](uid));
-            const bad = (util.isNumber(uid) ? 31337 : '31337');
+            const bad = (util.isNumber(uid) ? 1337 : '1337');
             assert(!(await model[alter](bad, changes)), 'Changes made!');
             const after = Object.assign({}, await model[load](uid));
             assert.deepStrictEqual(after, init);
@@ -355,9 +349,8 @@ function verifyModel(model) {
 };
 
 describe('model', async function() {
-  // TODO: reenable testing for basic model!
-  // const basic = new dbinst.Database();
-  // describe('basic', verifyModel.bind(undefined, basic));
+  const basic = new dbinst.Database();
+  describe('basic', verifyModel.bind(undefined, basic));
 
   // Only allow this for testing
   config.SQLCREDS.multipleStatements = true;
