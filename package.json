@@ -4,14 +4,17 @@
   "description": "",
   "main": "lib/server.js",
   "scripts": {
-    "test": "nyc mocha",
+    "test": "mocha",
+    "test-coverage": "nyc mocha",
     "start": "node lib/server.js",
     "build": "echo build",
+    "check": "bash ./check.sh",
     "lint": "eslint --ignore-pattern '*.json' lib/** test/**",
     "fixlint": "eslint --fix --ignore-pattern '*.json' lib/** test/**",
-    "pretest": "npm run lint",
+    "pretest": "npm run check",
     "prebuild": "npm run test",
-    "prestart": "npm run lint"
+    "prestart": "npm run check",
+    "precheck": "npm run lint"
   },
   "repository": {
     "type": "git",
