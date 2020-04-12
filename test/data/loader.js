@@ -1,100 +1,31 @@
 const fs = require('fs');
-const user = require('../../lib/model/user.js');
-const utypes = user.UTDPersonnel.types;
-const bcrypt = require('bcrypt');
+
+const tables = [
+  ['COMPANY', 'Company', 'name'],
+  ['USER', 'User', 'userId'],
+  ['EMPLOYEE', 'Employee', 'euid'],
+  ['UTD_PERSONNEL', 'UTD', 'uid'],
+  ['FACULTY', 'Faculty', 'fuid'],
+  ['STUDENT', 'Student', 'suid'],
+  ['PROJECT', 'Project', 'projID'],
+  ['TEAM', 'Team', 'tid'],
+  ['HELP_TICKET', 'HelpTicket', 'hid']];
 
 // Load test data
-db = {};
-for (const ent of ['COMPANY', 'PROJECT', 'TEAM', 'USER']) {
-  db[ent] = JSON.parse(fs.readFileSync(`test/data/${ent}.json`, 'utf8'));
-}
-
-let nextUid = 0;
-uids = [];
-for (const u of db.USER) {
-  u.userId = nextUid++;
-  uids.push(u.userId);
-}
-
-// Somewhat normalized USER entity (with some redundancy)
-db2 = {
+ents = {};
+db = {
   USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-  STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
-  CHOICE: {}, HELP_TICKET: {},
+  STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, TEAM: {},
+  HELP_TICKET: {},
 };
 
 
-// Normalize USER entity
-for (const ent of db.USER) {
-  if (ent.isUtd) {
-    db2.UTD_PERSONNEL[ent.userId] = ent.utd;
-    delete ent.utd['uid'];
-    switch (ent.utd.uType) {
-      case utypes.STUDENT:
-        delete ent.student['suid'];
-        db2.STUDENT[ent.userId] = ent.student;
-        if (ent.student.memberOf !== null) {
-          ent.student.memberOf = parseInt(ent.student.memberOf.substr(1));
-        }
-        break;
-      case utypes.STAFF:
-        break;
-      case utypes.FACULTY:
-        delete ent.faculty['fuid'];
-        const id = parseInt(ent.faculty.tid.substr(1)) + 100;
-        db2.FACULTY[ent.userId] = ent.faculty;
-        db2.FACULTY_OR_TEAM[id] = {
-          teamId: id,
-          isRegTeam: false,
-        };
-        ent.faculty.tid = id;
-        break;
-      default:
-        assert.fail('bad uType');
-    }
+for (const [tbl, _, key] of tables) { // eslint-disable-line no-unused-vars
+  ents[tbl] = JSON.parse(fs.readFileSync(`test/data/${tbl}.json`, 'utf8'));
+  const t = db[tbl] = new Map();
+  for (const ent of ents[tbl]) {
+    t.set(ent[key], ent);
   }
-
-  if (ent.isEmployee) {
-    // Generate bcrypt hash for password
-    ent.employee.password = bcrypt.hashSync(ent.employee.password, 5);
-    db2.EMPLOYEE[ent.userId] = ent.employee;
-  }
-
-  delete ent['utd'];
-  delete ent['faculty'];
-  delete ent['employee'];
-  delete ent['student'];
-  db2.USER[ent.userId] = ent;
-}
-
-emps = Object.keys(db2.EMPLOYEE);
-faculties = Object.keys(db2.FACULTY);
-randEle = (lst) => lst[Math.floor(Math.random() * lst.length)];
-
-// Set primary key on PROJECT + COMPANY
-for (const ent of db.PROJECT) {
-  db2.PROJECT[ent.projID] = ent;
-  ent.mentor = ent.mentor && randEle(emps);
-  ent.sponsor = ent.sponsor && randEle(emps);
-  ent.advisor = ent.advisor && randEle(faculties);
-}
-
-for (const ent of db.COMPANY) {
-  ent.manager = null; // delete b/c of foreign key
-  db2.COMPANY[ent.name] = ent;
-}
-
-// Normalize TEAM
-for (const ent of db.TEAM) {
-  const id = parseInt(ent.tid.substr(1));
-  ent.tid = id;
-  db2.TEAM[id] = ent;
-  ent.assignedProj = null; // delete b/c of foreign key
-  ent.leader = null; // delete b/c of foreign key
-  db2.FACULTY_OR_TEAM[id] = {
-    teamId: id,
-    isRegTeam: true,
-  };
 }
 
 /**
@@ -103,47 +34,13 @@ for (const ent of db.TEAM) {
  */
 async function loadIntoDB(dbinst) {
   await dbinst.clear();
-
-  for (const t of db.TEAM) {
-    await dbinst.insertTeamInfo(t.tid, t);
-  }
-
-  for (const c of db.COMPANY) {
-    await dbinst.insertCompanyInfo(c.name, c);
-  }
-
-  for (const u of db.USER) {
-    const uid = u.userId;
-    await dbinst.insertUserInfo(uid, u);
-    if (u.isUtd) {
-      const utd = db2.UTD_PERSONNEL[uid];
-      await dbinst.insertUTDInfo(uid, utd);
-      switch (utd.uType) {
-        case utypes.STUDENT:
-          await dbinst.insertStudentInfo(uid, db2.STUDENT[uid]);
-          break;
-        case utypes.STAFF:
-          break;
-        case utypes.FACULTY:
-          await dbinst.insertFacultyInfo(uid, db2.FACULTY[uid]);
-          break;
-        default:
-          assert.fail('bad uType');
-      }
-    }
-
-    if (u.isEmployee) {
-      await dbinst.insertEmployeeInfo(uid, db2.EMPLOYEE[uid]);
+  for (const [tbl, name, pkey] of tables) {
+    for (const ent of ents[tbl]) {
+      await dbinst['insert' + name + 'Info'](ent[pkey], Object.assign({}, ent));
     }
   }
-
-  for (const p of db.PROJECT) {
-    await dbinst.insertProjectInfo(p.projID, p);
-  }
-
-  // TODO: insert projects and other stuff
 }
 
-exports.db = db2;
-exports.users = uids;
+exports.db = db;
+exports.users = Array(...db.USER.keys());
 exports.loadIntoDB = loadIntoDB;
