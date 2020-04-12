@@ -12,6 +12,7 @@
     "lint": "eslint --ignore-pattern '*.json' lib/** test/**",
     "fixlint": "eslint --fix --ignore-pattern '*.json' lib/** test/**",
     "pretest": "npm run check",
+    "pretest-coverage": "npm run check",
     "prebuild": "npm run test",
     "prestart": "npm run check",
     "precheck": "npm run lint"
