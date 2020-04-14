@@ -4,6 +4,7 @@
   "description": "",
   "main": "lib/server.js",
   "scripts": {
+    "mysql": "node lib/sqlcli.js",
     "test": "mocha",
     "test-coverage": "nyc mocha",
     "test-codecov": "nyc --reporter=lcov mocha; codecov",
@@ -43,6 +44,7 @@
     "nodemailer": "^6.4.5"
   },
   "devDependencies": {
+    "cli-table3": "^0.6.0",
     "codecov": "^3.6.5",
     "eslint": "^6.8.0",
     "eslint-config-google": "^0.14.0",
