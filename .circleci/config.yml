@@ -40,16 +40,6 @@ jobs:
           steps:
             - run: npm install
             - run: npm test
-  build-coverage:
-    executor:
-      name: node-db
-    steps:
-      - checkout
-      - run: cp lib/config.js.def lib/config.js
-      - init-db
-      - node/with-cache:
-          steps:
-            - run: npm install
             - run: npm run test-codecov
 
 
@@ -57,4 +47,3 @@ workflows:
     build-and-test:
       jobs:
         - build-and-test
-        - build-coverage
