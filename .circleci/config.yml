@@ -1,8 +1,8 @@
 version: 2.1
 orbs:
   node: circleci/node@1.1.6
-jobs:
-  build-and-test:
+executors:
+  node-db:
     docker:
       - image: circleci/node:latest
       - image: circleci/mysql:5.7
@@ -11,28 +11,38 @@ jobs:
           MYSQL_DATABASE: CSProjectSystem
           MYSQL_USER: dbuser
           MYSQL_PASSWORD: thisisasecurepassword
+commands:
+  init-db:
+    steps:
+      - run:
+          # Our primary container isn't MYSQL so run a sleep command until it's ready.
+          name: Waiting for MySQL to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+      - run: sudo apt-get install default-mysql-client
+      - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTables.sql
+
+jobs:
+  build-and-test:
     executor:
-      name: node/default
+      name: node-db
     steps:
       - checkout
+      - run: cp lib/config.js.def lib/config.js
+      - init-db
       - node/with-cache:
           steps:
-            - run: cp lib/config.js.def lib/config.js
             - run: npm install
-            - run:
-                # Our primary container isn't MYSQL so run a sleep command until it's ready.
-                name: Waiting for MySQL to be ready
-                command: |
-                  for i in `seq 1 10`;
-                  do
-                    nc -z 127.0.0.1 3306 && echo Success && exit 0
-                    echo -n .
-                    sleep 1
-                  done
-                  echo Failed waiting for MySQL && exit 1
-            - run: sudo apt-get install default-mysql-client
-            - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTables.sql
+            - run: npm run test-codecov
             - run: npm test
+
+
 workflows:
     build-and-test:
       jobs:
