@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   node: circleci/node@1.1.6
 jobs:
-  build-and-test:
+  build:
     docker:
       - image: circleci/node:latest
       - image: circleci/mysql:5.7
@@ -32,8 +32,18 @@ jobs:
                   echo Failed waiting for MySQL && exit 1
             - run: sudo apt-get install default-mysql-client
             - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTables.sql
-            - run: npm test
+  test: 
+    requires: build
+    steps:
+      - run: npm test
+  coverage:
+    requires: build
+    steps:
+      - run: npm run test-codecov
+
+
 workflows:
-    build-and-test:
+    test-and-coverage:
       jobs:
         - build-and-test
+        - build-coverage
