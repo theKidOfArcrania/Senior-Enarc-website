@@ -29,7 +29,7 @@ commands:
       - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTables.sql
 
 jobs:
-  build:
+  build-and-test:
     executor:
       name: node-db
     steps:
@@ -39,11 +39,22 @@ jobs:
       - node/with-cache:
           steps:
             - run: npm install
-            -
+            - run: npm test
+  build-coverage:
+    executor:
+      name: node-db
+    steps:
+      - checkout
+      - run: cp lib/config.js.def lib/config.js
+      - init-db
+      - node/with-cache:
+          steps:
+            - run: npm install
+            - run: npm test-codecov
 
 
 workflows:
-    test-and-coverage:
+    build-and-test:
       jobs:
         - build-and-test
         - build-coverage
