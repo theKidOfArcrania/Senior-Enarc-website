@@ -91,7 +91,7 @@ create table Project (
 create table Team (
 	tid int,
   assignedProj int NULL UNIQUE,
-  budget int NOT NULL,
+  budget float NOT NULL,
   leader int,
   password varchar(100),
   PRIMARY KEY (tid),

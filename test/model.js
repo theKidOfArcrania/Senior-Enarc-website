@@ -14,7 +14,6 @@ const loader = require('./data/loader.js');
 
 const db2 = loader.db;
 
-
 /**
  * Transforms a function into a filter function.
  * @param {Function} fn    the function
@@ -93,11 +92,71 @@ function verifyModel(model) {
     model.beginTransaction();
     await loader.loadIntoDB(model);
     model.commit();
+
+    if (model.pcon) {
+    }
   });
 
   beforeEach(() => dbinst.inst = model);
 
+  describe('transactions', function() {
+    it('begin with commit will keep changes', async function() {
+      help = {
+        hid: 61337,
+        hStatus: 'none',
+        hDescription: 'Hello world!',
+        requestor: 0,
+      };
+      await model.beginTransaction();
+      await model.insertHelpTicketInfo(help.hid, help);
+      await model.beginTransaction();
+      await model.alterHelpTicketInfo(help.hid, {hStatus: 'resolved'});
+      help.hStatus = 'resolved';
+      await model.commit();
+      await model.commit();
+      assert.deepStrictEqual(help, await model.loadHelpTicketInfo(help.hid));
+    });
+
+    it('rollback all changes even within a nested commit', async function() {
+      help = {
+        hid: 31337,
+        hStatus: 'none',
+        hDescription: 'Hello world!',
+        requestor: 0,
+      };
+      await model.beginTransaction();
+      await model.insertHelpTicketInfo(help.hid, help);
+      await model.beginTransaction();
+      await model.rollback();
+      assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'test'})));
+    });
+  });
+
   describe('query', function() {
+    const loads = [
+      ['COMPANY', 'Company'],
+      ['EMPLOYEE', 'Employee'],
+      ['FACULTY', 'Faculty'],
+      ['HELP_TICKET', 'HelpTicket'],
+      ['PROJECT', 'Project'],
+      ['STUDENT', 'Student'],
+      ['TEAM', 'Team'],
+      ['UTD_PERSONNEL', 'UTD'],
+      ['USER', 'User'],
+    ];
+
+    for (const [tbl, mthName] of loads) {
+      describe('table ' + tbl, function() {
+        it('has correct value', async function() {
+          tb = db2[tbl];
+          for (const [pkey, ent] of tb) {
+            const actual = await model['load' + mthName + 'Info'](pkey);
+            assert.deepStrictEqual(actual, ent);
+          }
+        });
+      });
+    }
+
     describe('user', function() {
       // Various filters to see different views of a user
       const utdFilt = filter((uu) => (uu.isUtd && uu.utd));
@@ -297,9 +356,6 @@ function verifyModel(model) {
       ['User', 0, {fname: 'John'}],
     ];
 
-    before(async function() {
-    });
-
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
@@ -365,6 +421,7 @@ describe('model', async function() {
     sqlconn.close();
   });
   this.timeout(30000);
+
   describe('mysql', verifyModel.bind(this, sqlconn));
 });
 
