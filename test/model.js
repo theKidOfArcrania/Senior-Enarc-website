@@ -363,6 +363,8 @@ describe('model', async function() {
   const basic = new Database();
   describe('basic', verifyModel.bind(undefined, basic));
 
+  before(require('./danglingTest.js').before);
+
   // Only allow this for testing
   config.SQLCREDS.multipleStatements = true;
   const sqldb = new sql.SQLDatabase(config.SQLCREDS);
