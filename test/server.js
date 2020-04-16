@@ -50,7 +50,7 @@ describe('server', function() {
   });
 
   after(function() {
-    server.close();
+    if (server) server.close();
   });
 
   beforeEach(async function() {

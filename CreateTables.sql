@@ -95,6 +95,7 @@ create table Team (
   leader int,
   password varchar(100),
   PRIMARY KEY (tid),
+  FOREIGN KEY (tid) references FacultyOrTeam (teamID),
   FOREIGN KEY (assignedProj) references Project (projID)
     ON UPDATE CASCADE ON DELETE SET NULL,
   FOREIGN KEY (leader) references Student (suid)
