@@ -1,3 +1,5 @@
+const danglingTest = require('../lib/dangling.js');
+
 const config = require('../lib/config.js');
 config.TESTING = true;
 
@@ -57,7 +59,7 @@ function verifyModel(db) {
     if (model) {
       await model.rollback();
     }
-    db.close();
+    await db.close();
   });
 
   beforeEach(() => setInst(model));
@@ -380,6 +382,8 @@ describe('model', async function() {
   this.timeout(30000);
 
   describe('mysql', verifyModel.bind(this, sqldb));
+
+  describe('dangling', danglingTest);
 });
 
 // TODO: test partial updates
