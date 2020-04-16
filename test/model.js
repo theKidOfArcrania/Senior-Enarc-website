@@ -1,11 +1,12 @@
-const danglingTest = require('../lib/dangling.js');
+// const danglingTest = require('../lib/dangling.js');
+// if (!process.env['DANGLING_TEST']) danglingTest.disable();
 
 const config = require('../lib/config.js');
 config.TESTING = true;
 
 const assert = require('assert');
 const user = require('../lib/model/user.js');
-const {setInst, Database} = require('../lib/model/db.js');
+const {Database} = require('../lib/model/db.js');
 const sql = require('../lib/model/sqldb.js');
 const util = require('../lib/util.js');
 
@@ -62,7 +63,7 @@ function verifyModel(db) {
     await db.close();
   });
 
-  beforeEach(() => setInst(model));
+  // beforeEach(() => setInst(model));
 
   describe('nested transactions', function() {
     it('begin with commit will keep changes', async function() {
@@ -323,46 +324,35 @@ function verifyModel(db) {
       ['User', 0, {fname: 'John'}],
     ];
 
+    // beforeEach(async function() {
+    //   await loadIntoDB(model);
+    // });
+
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
 
       describe(mth, function() {
         it('can partial update', async function() {
-          await model.pushSP();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            assert(await model[alter](uid, changes), 'No changes made!');
-            const after = Object.assign({}, await model[load](uid));
+          const init = Object.assign({}, await model[load](uid));
+          assert(await model[alter](uid, changes), 'No changes made!');
+          const after = Object.assign({}, await model[load](uid));
 
-            Object.assign(init, changes);
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.restoreSP();
-          }
+          Object.assign(init, changes);
+          assert.deepStrictEqual(after, init);
         });
         it('should not change if invalid ID', async function() {
-          await model.pushSP();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            const bad = (util.isNumber(uid) ? 1337 : '1337');
-            assert(!(await model[alter](bad, changes)), 'Changes made!');
-            const after = Object.assign({}, await model[load](uid));
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.restoreSP();
-          }
+          const init = Object.assign({}, await model[load](uid));
+          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          assert(!(await model[alter](bad, changes)), 'Changes made!');
+          const after = Object.assign({}, await model[load](uid));
+          assert.deepStrictEqual(after, init);
         });
         it('should not change if invalid fields', async function() {
-          await model.pushSP();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
-            const after = Object.assign({}, await model[load](uid));
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.restoreSP();
-          }
+          const init = Object.assign({}, await model[load](uid));
+          assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
+          const after = Object.assign({}, await model[load](uid));
+          assert.deepStrictEqual(after, init);
         });
       });
     }
@@ -377,13 +367,13 @@ describe('model', async function() {
   config.SQLCREDS.multipleStatements = true;
   const sqldb = new sql.SQLDatabase(config.SQLCREDS);
   after(async () => {
-    sqldb.close();
+    await sqldb.close();
   });
   this.timeout(30000);
 
   describe('mysql', verifyModel.bind(this, sqldb));
-
-  describe('dangling', danglingTest);
 });
+
+describe('dangling promises', require('./danglingTest.js'));
 
 // TODO: test partial updates

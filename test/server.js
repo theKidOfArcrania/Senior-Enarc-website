@@ -1,5 +1,3 @@
-const danglingTest = require('../lib/dangling.js');
-
 const request = require('supertest');
 const assert = require('assert');
 
@@ -275,6 +273,6 @@ describe('server', function() {
       });
     });
   });
-
-  describe('dangling', danglingTest);
 });
+
+describe('dangling promises', require('./danglingTest.js'));

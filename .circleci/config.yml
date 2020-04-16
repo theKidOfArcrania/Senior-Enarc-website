@@ -40,7 +40,7 @@ jobs:
             - run: npm install
             - init-db
             - run: npm run test-codecov
-            - run: npm test
+            - run: npm run test-dangling
 
 
 workflows:

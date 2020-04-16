@@ -6,6 +6,7 @@
   "scripts": {
     "mysql": "node lib/sqlcli.js",
     "test": "mocha",
+    "test-dangling": "DANGLING_TEST=1 mocha",
     "test-coverage": "nyc mocha",
     "test-codecov": "nyc --reporter=lcov mocha; codecov",
     "start": "node lib/server.js",
@@ -16,6 +17,7 @@
     "pretest": "npm run check",
     "pretest-coverage": "npm run check",
     "pretest-codecov": "npm run check",
+    "pretest-dangling": "npm run check",
     "prebuild": "npm run test",
     "prestart": "npm run check",
     "precheck": "npm run lint"
