@@ -227,10 +227,7 @@ describe('server', function() {
       });
       it('tbrown (admins) can access all teams', async function() {
         await doLogin(eBrown);
-        const list = [];
-        for (let i = 0; i <= 52; i++) list.push(i);
-
-        const r1 = await json.post('/api/v1/team', list);
+        const r1 = await json.post('/api/v1/team', util.range(0, 53));
         assert(r1.success);
         const teams = Object.keys(r1.body)
             .map((n) => parseInt(n))
