@@ -1,12 +1,14 @@
+// const danglingTest = require('../lib/dangling.js');
+// if (!process.env['DANGLING_TEST']) danglingTest.disable();
+
 const config = require('../lib/config.js');
 config.TESTING = true;
 
 const assert = require('assert');
 const user = require('../lib/model/user.js');
-const dbinst = require('../lib/model/db.js');
-const sqldb = require('../lib/model/sqldb.js');
+const {Database} = require('../lib/model/db.js');
+const sql = require('../lib/model/sqldb.js');
 const util = require('../lib/util.js');
-const fs = require('fs').promises;
 
 const utypes = user.UTDPersonnel.types;
 
@@ -29,46 +31,6 @@ function filter(fn) {
   return fn;
 }
 
-
-/**
- * Overlays the actual tables with memory temporary tables to allow for quicker
- * inserts/queries rather than reading to underlying disk.
- * @param {Connection} pconn     the underlying SQL connection
- */
-async function sqlCreateTempTables(pconn) {
-  const stmts = (await fs.readFile('./CreateTables.sql',
-      {encoding: 'utf8'})).split(';');
-
-  for (let st of stmts) {
-    st = st.trim();
-    if (!st) continue;
-    if (st.toUpperCase().startsWith('USE')) continue;
-    if (st.toUpperCase().startsWith('DROP DATABASE')) continue;
-    if (st.toUpperCase().startsWith('CREATE DATABASE')) continue;
-    if (st.toUpperCase().startsWith('CREATE TABLE')) {
-      st = st.replace(/CREATE TABLE/i, 'CREATE TEMPORARY TABLE');
-
-      // Strip foreign key constraints
-      const flds = [];
-      let lastRemoved = false;
-      for (const fld of st.split(',')) {
-        if (fld.trim().toUpperCase().startsWith('FOREIGN KEY')) {
-          lastRemoved = true;
-        } else {
-          flds.push(fld);
-          lastRemoved = false;
-        }
-      }
-      st = flds.join(',');
-      if (lastRemoved) st += ')';
-    }
-    if (st.toUpperCase().startsWith('ALTER TABLE')) {
-      if (st.toUpperCase().includes('FOREIGN KEY')) continue;
-    }
-    await pconn.query(st);
-  }
-}
-
 /**
  * Asserts that the expected list equals the actual list, after disregarding
  * order of elements
@@ -84,22 +46,26 @@ function equalsList(actual, expected) {
 
 /**
  * This verifies that a DB model is correct and valid.
- * @param {Object} model     the database model to test
+ * @param {Object} db   the db object model to test
  */
-function verifyModel(model) {
+function verifyModel(db) {
+  let model;
   before(async function() {
     this.timeout(30000);
-    model.beginTransaction();
+    model = await db.beginTransaction();
     await loader.loadIntoDB(model);
-    model.commit();
-
-    if (model.pcon) {
-    }
   });
 
-  beforeEach(() => dbinst.inst = model);
+  after(async function() {
+    if (model) {
+      await model.rollback();
+    }
+    await db.close();
+  });
 
-  describe('transactions', function() {
+  // beforeEach(() => setInst(model));
+
+  describe('nested transactions', function() {
     it('begin with commit will keep changes', async function() {
       help = {
         hid: 61337,
@@ -107,27 +73,29 @@ function verifyModel(model) {
         hDescription: 'Hello world!',
         requestor: 0,
       };
-      await model.beginTransaction();
+      await model.pushSP();
       await model.insertHelpTicketInfo(help.hid, help);
-      await model.beginTransaction();
+      await model.pushSP();
       await model.alterHelpTicketInfo(help.hid, {hStatus: 'resolved'});
       help.hStatus = 'resolved';
-      await model.commit();
-      await model.commit();
+      await model.popSP();
+      await model.popSP();
       assert.deepStrictEqual(help, await model.loadHelpTicketInfo(help.hid));
     });
 
-    it('rollback all changes even within a nested commit', async function() {
+    it('restore only respective SP', async function() {
       help = {
         hid: 31337,
         hStatus: 'none',
         hDescription: 'Hello world!',
         requestor: 0,
       };
-      await model.beginTransaction();
+      await model.pushSP();
       await model.insertHelpTicketInfo(help.hid, help);
-      await model.beginTransaction();
-      await model.rollback();
+      await model.pushSP();
+      await model.restoreSP();
+      assert.deepStrictEqual(await model.loadHelpTicketInfo(help.hid), help);
+      await model.restoreSP();
       assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'test'})));
     });
   });
@@ -182,7 +150,7 @@ function verifyModel(model) {
           pms = [];
           for (const u of loader.users) {
             let uu = new user.User(u);
-            pms.push(uu.reload().then((_) => {
+            pms.push(uu.reload(model).then((_) => {
               uu = filter(uu);
               if (uu) {
                 action(u, uu);
@@ -215,7 +183,7 @@ function verifyModel(model) {
         return async function() {
           pms = loader.users.map(async (u) => {
             u = new user.User(u);
-            await u.reload();
+            await u.reload(model);
             u = filt(u);
             if (u) return 1;
             else return 0;
@@ -356,73 +324,58 @@ function verifyModel(model) {
       ['User', 0, {fname: 'John'}],
     ];
 
+    // beforeEach(async function() {
+    //   await loadIntoDB(model);
+    // });
+
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
 
       describe(mth, function() {
         it('can partial update', async function() {
-          await model.beginTransaction();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            assert(await model[alter](uid, changes), 'No changes made!');
-            const after = Object.assign({}, await model[load](uid));
+          const init = Object.assign({}, await model[load](uid));
+          assert(await model[alter](uid, changes), 'No changes made!');
+          const after = Object.assign({}, await model[load](uid));
 
-            Object.assign(init, changes);
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.rollback();
-          }
+          Object.assign(init, changes);
+          assert.deepStrictEqual(after, init);
         });
         it('should not change if invalid ID', async function() {
-          await model.beginTransaction();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            const bad = (util.isNumber(uid) ? 1337 : '1337');
-            assert(!(await model[alter](bad, changes)), 'Changes made!');
-            const after = Object.assign({}, await model[load](uid));
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.rollback();
-          }
+          const init = Object.assign({}, await model[load](uid));
+          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          assert(!(await model[alter](bad, changes)), 'Changes made!');
+          const after = Object.assign({}, await model[load](uid));
+          assert.deepStrictEqual(after, init);
         });
         it('should not change if invalid fields', async function() {
-          await model.beginTransaction();
-          try {
-            const init = Object.assign({}, await model[load](uid));
-            assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
-            const after = Object.assign({}, await model[load](uid));
-            assert.deepStrictEqual(after, init);
-          } finally {
-            await model.rollback();
-          }
+          const init = Object.assign({}, await model[load](uid));
+          assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
+          const after = Object.assign({}, await model[load](uid));
+          assert.deepStrictEqual(after, init);
         });
       });
     }
   });
-
-  // TODO: insert test cases for properly loading other entities here
 };
 
 describe('model', async function() {
-  const basic = new dbinst.Database();
+  const basic = new Database();
   describe('basic', verifyModel.bind(undefined, basic));
+
+  before(require('./danglingTest.js').before);
 
   // Only allow this for testing
   config.SQLCREDS.multipleStatements = true;
-
-  const sqlconn = new sqldb.SQLDatabase(config.SQLCREDS);
-  before(async function() {
-    this.timeout(30000);
-    await sqlconn.connect();
-    await sqlCreateTempTables(sqlconn.pcon);
-  });
-  after(() => {
-    sqlconn.close();
+  const sqldb = new sql.SQLDatabase(config.SQLCREDS);
+  after(async () => {
+    await sqldb.close();
   });
   this.timeout(30000);
 
-  describe('mysql', verifyModel.bind(this, sqlconn));
+  describe('mysql', verifyModel.bind(this, sqldb));
 });
+
+describe('dangling promises', require('./danglingTest.js'));
 
 // TODO: test partial updates

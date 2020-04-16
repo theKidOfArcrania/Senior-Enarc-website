@@ -9,6 +9,16 @@ config.IFACE = {
 };
 const util = require('../lib/util.js');
 
+// Since all our requests are synchronous!
+util.Reentrant.prototype.tryLock = function() {
+  if (this.locked) {
+    throw new Error('Deadlock warning!');
+  } else {
+    this.locked = true;
+  }
+  return true;
+};
+
 const eDowley = 'adowley0@myspace.com';
 const eBrown = 'tbrownjohn7@cdbaby.com';
 const eStennes = 'hstennesa@cmu.edu';
@@ -45,12 +55,14 @@ describe('server', function() {
   let server;
   let agent;
 
+  before(require('./danglingTest.js').before);
+
   before(async function() {
     server = await require('../lib/server.js')();
   });
 
   after(function() {
-    server.close();
+    if (server) server.close();
   });
 
   beforeEach(async function() {
@@ -274,3 +286,5 @@ describe('server', function() {
     });
   });
 });
+
+describe('dangling promises', require('./danglingTest.js'));
