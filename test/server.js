@@ -24,6 +24,7 @@ const eBrown = 'tbrownjohn7@cdbaby.com';
 const eStennes = 'hstennesa@cmu.edu';
 const eVivianne = 'vweine4@ox.ac.uk';
 const eDarline = 'deric8@un.org';
+const eCattermoul = 'mcattermoul1@photobucket.com';
 
 const eBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
@@ -48,6 +49,10 @@ uspecs = {
   [eVivianne]: {
     admin: false, utd: false, employee: true,
     utype: null, name: 'Weine, Vivianne',
+  },
+  [eCattermoul]: {
+    admin: true, utd: true, employee: false,
+    utype: 'student', name: 'Cattermoul, Muire',
   },
 };
 
@@ -252,6 +257,27 @@ describe('server', function() {
             .nsort();
         assert.deepStrictEqual(teams, [7, 39, 49]);
       });
+      it('should not alter unless team leader', async function() {
+        await doLogin(eCattermoul);
+        const r1 = await json.put('/api/v1/team',
+            {choices: [8, 9, 5, 2, 4, 12]});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notteamleader');
+      });
+      it('should not make non-member leader', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/team', {leader: 9});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notinteam');
+      });
+      // TODO
+      // it('should not duplicate project choices', async function() {
+      //   await doLogin(eDowley);
+      //   const r1 = await json.put('/api/v1/team',
+      //       {choices: [8, 9, 5, 2, 8, 12]});
+      //   assert(!r1.success);
+      //   assert.strictEqual(r1.body.debug, 'duplicatechoice');
+      // });
     });
     describe('/team/list', function() {
       it('should deny access without login', async function() {
@@ -280,6 +306,51 @@ describe('server', function() {
         assert(r1.success);
         assert.deepStrictEqual(r1.body.nsort(), [6, 39, 42, 50]);
       });
+    });
+    describe('/team/join', function() {
+      it('should return already part of team', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.post('/api/v1/team/join', {team: 40,
+          password: null});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'alreadyjoin');
+      });
+      it('should return no such team exists', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 51,
+          password: null});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'badteam');
+      });
+      it('should return team requires a password', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 1,
+          password: null});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'noteampass');
+      });
+      it('should return invalid password', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 1,
+          password: 'null'});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'badteampass');
+      });
+      // it('should return successfully joined team', async function() {
+      //   await doLogin(eDarline);
+      //   const r1 = await json.post('/api/v1/team/join', {team: 2,
+      //     password: 'someotherhash'});
+      //   assert(!r1.success);
+      //   assert.strictEqual(r1.body.debug, 'success');
+      // });
+    });
+    // describe('/team/leave', async function() {
+    //   it('should make new leader if leader leaves', async function() {
+    //     await doLogin(eDowley);
+    //     const r1 = await json.post('/team/leave', {team: 39});
+    //     assert(!r1.success);
+    //     assert.strictEqual(r1.body.debug, 'teamleader');
+    //   });
     });
   });
 });
