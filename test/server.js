@@ -301,7 +301,7 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notinteam');
       });
-      // TODO: How to send choices to team w/ put request
+
       it('should not duplicate project choices', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team',
@@ -367,27 +367,37 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'badteampass');
       });
-      // it('should return successfully joined team', async function() {
-      //   await doLogin(eDarline);
-      //   const r1 = await json.post('/api/v1/team/join', {team: 2,
-      //     password: 'someotherhash'});
-      //   assert(!r1.success);
-      //   assert.strictEqual(r1.body.debug, 'success');
-      // });
+      it('should return successfully joined team w/o ' +
+          'password', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 3,
+          password: null});
+        assert(r1.success);
+        const r2 = await json.post('/api/v1/team/leave');
+        assert(r2.success);
+      });
+      it('should return successfully joined team', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 2,
+          password: 'someotherhash'});
+        assert(r1.success);
+      });
     });
     describe('/team/leave', async function() {
       it('should make new leader if leader leaves', async function() {
         await doLogin(eDowley);
-        const r1 = await json.post('/api/v1/team/leave', {team: 39});
+        const r1 = await json.post('/api/v1/team/leave');
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'teamleader');
       });
       it('should allow student to leave group', async function() {
         await doLogin(eCattermoul);
-        const r1 = await json.post('/api/v1/team/leave', {team: 39});
+        const r1 = await json.post('/api/v1/team/leave');
         assert(r1.success);
       });
     });
+
+    // TODO: Test cases for changing passwords
   });
   describe('project', function() {
     describe('/project', function() {
@@ -405,13 +415,12 @@ describe('server', function() {
         // const proj = Object.keys(r1.body);
         // assert.deepStrictEqual(proj, 2);
       });
-      // Error: ECONNREFUSED: Connection refused
-      // it('should show info about projects', async function() {
-      //   await doLogin(eCattermoul);
-      //   const r1 = await json.post('api/v1/project',
-      //       (1, 2, 3));
-      //   assert(r1.success);
-      // });
+      it('should show info about projects', async function() {
+        await doLogin(eCattermoul);
+        const r1 = await json.post('/api/v1/project',
+            [1, 2, 3]);
+        assert(r1.success);
+      });
     });
     describe('/project/submit', function() {
       it('should only allow managers to add projects', async function() {
@@ -422,14 +431,13 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notmanager');
       });
-      // it('should successfully add project', async function() {
-      //   await doLogin(eKrystal);
-      //   const r1 = await json.post('/api/v1/project/submit',
-      //       {pName: 'Test', pDesc: 'test test', status: 'active',
-      //         sponsor: 1, mentor: 2});
-      //   assert(!r1.success);
-      //   assert.strictEqual(r1.body.debug, 'notmanager');
-      // });
+      it('should successfully add project', async function() {
+        await doLogin(eKrystal);
+        const r1 = await json.post('/api/v1/project/submit',
+            {pName: 'Test', pDesc: 'test test', status: 'active',
+              sponsor: 1, mentor: 2});
+        assert(r1.success);
+      });
     });
     describe('/project/mylist', function() {
       it('should return all projects user is part of', async function() {

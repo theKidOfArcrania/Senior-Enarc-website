@@ -1,5 +1,5 @@
-[{"tid":1,"password":"somehash","assignedProj":null,"budget":74.97,"leader":null,"choices":[39,45,17]},
-{"tid":2,"password":"someotherhash","assignedProj":null,"budget":356.8,"leader":null,"choices":null},
+[{"tid":1,"password":"$2b$10$mWVBIQ/gELQPsmlqq9Xk/ONEXt3P8DznJepn4csw8E7USRY.rIhyW","assignedProj":null,"budget":74.97,"leader":null,"choices":[39,45,17]},
+{"tid":2,"password":"$2b$10$5wCgOINZF00sMJ48ADR6B.kMQuFtYMVIlcglO//nrML6EH1m8uUmK","assignedProj":null,"budget":356.8,"leader":null,"choices":null},
 {"tid":3,"password":null,"assignedProj":null,"budget":414.78,"leader":null,"choices":[19,14,3,28,37,24]},
 {"tid":4,"password":null,"assignedProj":4,"budget":561.77,"leader":null,"choices":null},
 {"tid":5,"password":null,"assignedProj":5,"budget":515.01,"leader":null,"choices":null},
