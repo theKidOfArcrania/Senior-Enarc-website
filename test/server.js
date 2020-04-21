@@ -25,6 +25,7 @@ const eStennes = 'hstennesa@cmu.edu';
 const eVivianne = 'vweine4@ox.ac.uk';
 const eDarline = 'deric8@un.org';
 const eCattermoul = 'mcattermoul1@photobucket.com';
+const eKrystal = 'kfurlow5@china.com.cn';
 
 const eBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
@@ -53,6 +54,10 @@ uspecs = {
   [eCattermoul]: {
     admin: true, utd: true, employee: false,
     utype: 'student', name: 'Cattermoul, Muire',
+  },
+  [eKrystal]: {
+    admin: true, utd: true, employee: true,
+    utype: 'student', name: 'Furlow, Krystal',
   },
 };
 
@@ -114,6 +119,13 @@ describe('server', function() {
   });
 
   describe('login', function() {
+    it('testlogin fail situation', async function() {
+      const r1 = await json.post('/api/v1/testlogin', {
+        email: 'bademail@gmail.com',
+      });
+      assert(!r1.success);
+      assert.strictEqual(r1.body.debug, 'nouser');
+    });
     it('by default you\'re not authenticated.', async function() {
       const resp = await json.get('/api/v1/checksess');
       assert(!resp.success);
@@ -173,6 +185,25 @@ describe('server', function() {
       assert.strictEqual(agent.jar.getCookies().length, 0);
       assert(!r1.success);
       assert.strictEqual(r1.body.debug, 'badpassword');
+    });
+
+    it('should not login with invalid email', async function() {
+      const r1 = await json.post('/api/v1/utdlogin', {
+        email: 'bademail@gmail.com',
+      });
+      assert.strictEqual(agent.jar.getCookies().length, 0);
+      assert(!r1.success);
+      assert.strictEqual(r1.body.debug, 'nouser');
+    });
+
+    it('should authenticate utd with correct email', async function() {
+      const r1 = await json.post('/api/v1/utdlogin', {
+        email: eDowley,
+      });
+      assert(r1.success);
+      const r2 = await json.get('/api/v1/checksess');
+      assert(r2.success);
+      assert.deepStrictEqual(r2.body, uspecs[eDowley]);
     });
   });
 
@@ -270,14 +301,14 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notinteam');
       });
-      // TODO
-      // it('should not duplicate project choices', async function() {
-      //   await doLogin(eDowley);
-      //   const r1 = await json.put('/api/v1/team',
-      //       {choices: [8, 9, 5, 2, 8, 12]});
-      //   assert(!r1.success);
-      //   assert.strictEqual(r1.body.debug, 'duplicatechoice');
-      // });
+      // TODO: How to send choices to team w/ put request
+      it('should not duplicate project choices', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/team',
+            {choices: [8, 9, 5, 2, 8, 12]});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'duplicatechoice');
+      });
     });
     describe('/team/list', function() {
       it('should deny access without login', async function() {
@@ -344,13 +375,75 @@ describe('server', function() {
       //   assert.strictEqual(r1.body.debug, 'success');
       // });
     });
-    // describe('/team/leave', async function() {
-    //   it('should make new leader if leader leaves', async function() {
-    //     await doLogin(eDowley);
-    //     const r1 = await json.post('/team/leave', {team: 39});
-    //     assert(!r1.success);
-    //     assert.strictEqual(r1.body.debug, 'teamleader');
-    //   });
+    describe('/team/leave', async function() {
+      it('should make new leader if leader leaves', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.post('/api/v1/team/leave', {team: 39});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'teamleader');
+      });
+      it('should allow student to leave group', async function() {
+        await doLogin(eCattermoul);
+        const r1 = await json.post('/api/v1/team/leave', {team: 39});
+        assert(r1.success);
+      });
+    });
+  });
+  describe('project', function() {
+    describe('/project', function() {
+      it('should return no projects to view', async function() {
+        await doLogin(eBrown);
+        const r1 = await json.get('/api/v1/project');
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'noproj');
+      });
+      it('should return first project for this user', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.get('/api/v1/project');
+        assert(r1.success);
+        // TODO assert.strictEqual
+        // const proj = Object.keys(r1.body);
+        // assert.deepStrictEqual(proj, 2);
+      });
+      // Error: ECONNREFUSED: Connection refused
+      // it('should show info about projects', async function() {
+      //   await doLogin(eCattermoul);
+      //   const r1 = await json.post('api/v1/project',
+      //       (1, 2, 3));
+      //   assert(r1.success);
+      // });
+    });
+    describe('/project/submit', function() {
+      it('should only allow managers to add projects', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.post('/api/v1/project/submit',
+            {pName: 'Test', pDesc: 'test test', status: 'active',
+              sponsor: 1, mentor: 2});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notmanager');
+      });
+      // it('should successfully add project', async function() {
+      //   await doLogin(eKrystal);
+      //   const r1 = await json.post('/api/v1/project/submit',
+      //       {pName: 'Test', pDesc: 'test test', status: 'active',
+      //         sponsor: 1, mentor: 2});
+      //   assert(!r1.success);
+      //   assert.strictEqual(r1.body.debug, 'notmanager');
+      // });
+    });
+    describe('/project/mylist', function() {
+      it('should return all projects user is part of', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.get('/api/v1/project/mylist');
+        assert(r1.success);
+      });
+    });
+    describe('/project/list', function() {
+      it('should return all public projects', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.get('/api/v1/project/list');
+        assert(r1.success);
+      });
     });
   });
 });
