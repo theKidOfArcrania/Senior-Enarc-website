@@ -96,6 +96,7 @@ create table Team (
   budget float NOT NULL,
   leader int,
   password varchar(100),
+  comments varchar(1000),
   PRIMARY KEY (tid),
   FOREIGN KEY (tid) references FacultyOrTeam (teamID),
   FOREIGN KEY (assignedProj) references Project (projID)
