@@ -74,6 +74,7 @@ create table Skills (
 create table Project (
 	projID int,
   pName varchar(50) NOT NULL,
+  company varchar(50) NOT NULL,
   image varchar(100),
   projDoc varchar(100),
   pDesc varchar(1000),
@@ -83,6 +84,7 @@ create table Project (
   status varchar(15) NOT NULL,
   visible boolean NOT NULL,
   PRIMARY KEY (projID),
+  FOREIGN KEY (company) references Company (name),
   FOREIGN KEY (mentor) references Users (userID),
   FOREIGN KEY (sponsor) references Users (userID),
   FOREIGN KEY (advisor) references Faculty (fuid)
