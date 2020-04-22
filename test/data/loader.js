@@ -17,6 +17,7 @@ const tables = [
 const foreignKeys = {
   Student: ['memberOf'],
   Company: ['manager'],
+  Team: ['leader'],
 };
 
 // Load test data

@@ -426,17 +426,38 @@ describe('server', function() {
       it('should only allow managers to add projects', async function() {
         await doLogin(eDowley);
         const r1 = await json.post('/api/v1/project/submit',
-            {pName: 'Test', pDesc: 'test test', status: 'active',
-              sponsor: 1, mentor: 2});
+            {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 2,
+              image: null, projDoc: null});
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notmanager');
       });
       it('should successfully add project', async function() {
         await doLogin(eKrystal);
-        const r1 = await json.post('/api/v1/project/submit',
-            {pName: 'Test', pDesc: 'test test', status: 'active',
-              sponsor: 1, mentor: 2});
+        proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 2,
+          image: null, projDoc: null};
+        const r1 = await json.post('/api/v1/project/submit', proj);
         assert(r1.success);
+
+        // Check that it was added
+        await doLogin(eBrown);
+        const r2 = await json.get('/api/v1/project/list');
+        assert(r2.success);
+        const added = r2.body.nsort()[r2.body.length - 1];
+        const r3 = await json.post('/api/v1/project', [added]);
+        assert(r3.success);
+
+        const actual = r3.body[added];
+        // TODO: check what happened to userId???
+        actual.mentor = actual.mentor.uid;
+        actual.sponsor = actual.sponsor.uid;
+
+        proj.visible = false;
+        proj.skillsReq = [];
+        proj.advisor = null;
+        proj.status = 'submitted';
+        proj.company = 'Kwinu';
+        proj.projID = added;
+        assert.deepStrictEqual(actual, proj);
       });
     });
     describe('/project/mylist', function() {
