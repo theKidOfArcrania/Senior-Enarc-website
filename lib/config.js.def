@@ -12,6 +12,8 @@ module.exports = {
       maxAge: 60 * 60 * 1000, // 1 hr
     },
   },
+  FILE_STORE_CONFIG: {
+  },
   IFACE: {
     port: 3000,
     host: 'localhost',

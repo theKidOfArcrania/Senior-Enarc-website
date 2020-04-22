@@ -43,7 +43,8 @@
     "morgan": "^1.10.0",
     "mysql": "^2.18.1",
     "nodejs-snowflake": "^1.4.1",
-    "nodemailer": "^6.4.5"
+    "nodemailer": "^6.4.5",
+    "session-file-store": "^1.4.0"
   },
   "devDependencies": {
     "cli-table3": "^0.6.0",
