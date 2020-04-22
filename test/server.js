@@ -411,15 +411,17 @@ describe('server', function() {
         await doLogin(eDowley);
         const r1 = await json.get('/api/v1/project');
         assert(r1.success);
-        // TODO assert.strictEqual
-        // const proj = Object.keys(r1.body);
-        // assert.deepStrictEqual(proj, 2);
+        assert.strictEqual(r1.body.projID, 2);
       });
       it('should show info about projects', async function() {
         await doLogin(eCattermoul);
         const r1 = await json.post('/api/v1/project',
-            [1, 2, 3]);
+            util.range(0, 52));
         assert(r1.success);
+        const keys = Object.keys(r1.body)
+            .map((n) => parseInt(n))
+            .nsort();
+        assert.deepStrictEqual(keys, util.range(1, 51));
       });
     });
     describe('/project/submit', function() {
