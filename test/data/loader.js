@@ -11,7 +11,8 @@ const tables = [
   ['STUDENT', 'Student', 'suid'],
   ['PROJECT', 'Project', 'projID'],
   ['TEAM', 'Team', 'tid'],
-  ['HELP_TICKET', 'HelpTicket', 'hid']];
+  ['HELP_TICKET', 'HelpTicket', 'hid'],
+  ['INVITE', 'Invite', 'inviteID']];
 
 const foreignKeys = {
   Student: ['memberOf'],
@@ -23,7 +24,7 @@ ents = {};
 db = {
   USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
   STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, TEAM: {},
-  HELP_TICKET: {},
+  HELP_TICKET: {}, INVITE: {},
 };
 
 
@@ -39,6 +40,8 @@ for (const [tbl, _, key] of tables) { // eslint-disable-line no-unused-vars
       ent.choices = ent.choices.concat(Array(6).fill(null)).slice(0, 6);
     } else if (tbl === 'STUDENT') {
       ent.skills.sort(util.caseInsensOrder);
+    } else if (tbl === 'INVITE') {
+      ent.expiration = new Date(ent.expiration);
     }
   }
 }

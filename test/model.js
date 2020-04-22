@@ -104,7 +104,6 @@ function verifyModel(db) {
     const loads = [
       ['COMPANY', 'Company'],
       ['EMPLOYEE', 'Employee'],
-      ['FACULTY', 'Faculty'],
       ['HELP_TICKET', 'HelpTicket'],
       ['PROJECT', 'Project'],
       ['STUDENT', 'Student'],
@@ -259,7 +258,7 @@ function verifyModel(db) {
 
       describe('Faculty', function() {
         const should = ['tid'];
-        const maybe = ['uid'];
+        const maybe = ['uid', 'choices'];
         it('should exist', exists(facFilt));
         checkUserProps(it, facFilt, db2.FACULTY, should, maybe);
       });
@@ -315,11 +314,10 @@ function verifyModel(db) {
     const alters = [
       ['Company', 'Shufflebeat', {logo: 'abcde'}],
       ['Employee', 1, {password: 'abcde'}],
-      ['Faculty', 1, {tid: 102}],
       ['HelpTicket', 1, {requestor: 1}],
       ['Project', 1, {advisor: 1}],
       ['Student', 0, {major: 'no nonsense'}],
-      ['Team', 1, {leader: 0}],
+      ['Team', 39, {leader: 3}],
       ['UTD', 1, {isAdmin: true}],
       ['User', 0, {fname: 'John'}],
     ];

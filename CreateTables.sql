@@ -1,6 +1,5 @@
 drop database if exists CSProjectSystem;
 create database CSProjectSystem;
-
 use CSProjectSystem;
 
 create table Company (
@@ -13,7 +12,7 @@ create table Users (
 	userId int NOT NULL,
   fname varchar(50) NOT NULL,
   lname varchar(50) NOT NULL,
-  email varchar(30) NOT NULL UNIQUE,
+  email varchar(100) NOT NULL UNIQUE,
   address varchar(100) NOT NULL,
   isUtd boolean NOT NULL,
   isEmployee boolean NOT NULL,
@@ -84,7 +83,8 @@ create table Project (
   status varchar(15) NOT NULL,
   visible boolean NOT NULL,
   PRIMARY KEY (projID),
-  FOREIGN KEY (company) references Company (name),
+  FOREIGN KEY (company) references Company (name)
+    ON UPDATE CASCADE ON DELETE CASCADE,
   FOREIGN KEY (mentor) references Users (userID),
   FOREIGN KEY (sponsor) references Users (userID),
   FOREIGN KEY (advisor) references Faculty (fuid)
@@ -133,8 +133,60 @@ create table HelpTicket (
   FOREIGN KEY (requestor) references Users (userID)
 );
 
+create table Invite (
+  inviteID int,
+  expiration date NOT NULL,
+  company varchar(50),
+  managerFname varchar(50),
+  managerLname varchar(50),
+  managerEmail varchar(100),
+  PRIMARY KEY (inviteID)
+);
+
 alter table Student
 add FOREIGN KEY (memberOf) references Team (tid) ON DELETE SET NULL;
 
 alter table Company
 add FOREIGN KEY (manager) references Employee(euid) ON DELETE SET NULL;
+
+DELIMITER $$
+CREATE TRIGGER Before_Team_Update
+BEFORE UPDATE
+ON Team FOR EACH ROW
+BEGIN
+  DECLARE leaderMemberOf INT;
+
+  -- Check that the new leader is part of the team
+  IF NOT ISNULL(NEW.leader) THEN
+    SELECT memberOf
+    INTO leaderMemberOf
+    FROM Student WHERE suid = NEW.leader;
+
+    IF leaderMemberOf != NEW.tid OR ISNULL(leaderMemberOf) THEN
+      SIGNAL SQLSTATE '45000' SET message_text = "New leader should be in team";
+    END IF;
+  END IF;
+END$$
+
+CREATE TRIGGER Before_Team_Insert
+BEFORE INSERT
+ON Team FOR EACH ROW
+BEGIN
+  IF NOT ISNULL(NEW.leader) THEN
+    SIGNAL SQLSTATE '45000' SET message_text = "New leader should be in team";
+  END IF;
+END$$
+
+CREATE TRIGGER Before_Student_Update
+BEFORE UPDATE ON Student FOR EACH ROW
+BEGIN
+  -- When a student leaves a team, quietly remove the leader if he's leader.
+  -- Note that this only happens if an admin makes some changes
+  IF (ISNULL(NEW.memberOf) AND NOT ISNULL(OLD.memberOf)) OR
+      NEW.memberOf <> OLD.memberOf THEN
+    UPDATE Team SET leader = NULL
+    WHERE tid = OLD.memberOf AND leader = OLD.suid;
+  END IF;
+END$$
+
+DELIMITER ;
