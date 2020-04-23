@@ -36,7 +36,7 @@ create table FacultyOrTeam (
 
 create table UTDPersonnel (
 	uid int,
-  uType int NOT NULL,
+  uType ENUM('student', 'staff', 'faculty') NOT NULL,
   netID varchar(10) NOT NULL,
   isAdmin boolean NOT NULL,
   PRIMARY KEY (uid),

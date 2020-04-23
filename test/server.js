@@ -31,34 +31,15 @@ const eBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
 
 uspecs = {
-  [eBrown]: {
-    admin: true, utd: true, employee: true,
-    utype: 'faculty', name: 'Brownjohn, Tabby',
-  },
-  [eDowley]: {
-    admin: false, utd: true, employee: true,
-    utype: 'student', name: 'Dowley, Andreana',
-  },
-  [eStennes]: {
-    admin: false, utd: true, employee: false,
-    utype: 'staff', name: 'Stennes, Halli',
-  },
-  [eDarline]: {
-    admin: false, utd: true, employee: true,
-    utype: 'student', name: 'Eric, Darline',
-  },
-  [eVivianne]: {
-    admin: false, utd: false, employee: true,
-    utype: null, name: 'Weine, Vivianne',
-  },
+  [eBrown]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'faculty'},
+  [eDowley]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
+  [eStennes]: {isAdmin: false, isUtd: true, isEmployee: false, uType: 'staff'},
+  [eDarline]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
+  [eVivianne]: {isAdmin: false, isUtd: false, isEmployee: true, uType: null},
   [eCattermoul]: {
-    admin: true, utd: true, employee: false,
-    utype: 'student', name: 'Cattermoul, Muire',
+    isAdmin: false, isUtd: true, isEmployee: false, uType: 'student',
   },
-  [eKrystal]: {
-    admin: true, utd: true, employee: true,
-    utype: 'student', name: 'Furlow, Krystal',
-  },
+  [eKrystal]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'student'},
 };
 
 describe('server', function() {
@@ -107,13 +88,26 @@ describe('server', function() {
   json.post = json.bind(null, 'POST');
   json.put = json.bind(null, 'PUT');
 
+  /**
+   * Extracts the credential information from the user info, identifying at a
+   * glance what type of user this is.
+   *
+   * @param {Object} user     the normalized user object
+   * @return {Object} the extracted credential information
+   */
+  function getCredsFromUser(user) {
+    return util.copyAttribs({}, user, {
+      isAdmin: false, isEmployee: null, isUtd: null, uType: null,
+    });
+  }
+
   describe('test users', function() {
     for (const email of Object.keys(uspecs)) {
-      it(uspecs[email].name, async function() {
+      it(email, async function() {
         await doLogin(email);
         const r2 = await json.get('/api/v1/checksess');
         assert(r2.success);
-        assert.deepStrictEqual(r2.body, uspecs[email]);
+        assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[email]);
       });
     }
   });
@@ -136,7 +130,7 @@ describe('server', function() {
       await doLogin(eBrown);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(r2.body, uspecs[eBrown]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eBrown]);
     });
 
     it('should authenticate with correct email/password', async function() {
@@ -146,7 +140,7 @@ describe('server', function() {
       assert(r1.success);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(r2.body, uspecs[eBrown]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eBrown]);
     });
 
     it('should not auth with non employee', async function() {
@@ -203,7 +197,7 @@ describe('server', function() {
       assert(r1.success);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(r2.body, uspecs[eDowley]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eDowley]);
     });
   });
 
@@ -413,7 +407,7 @@ describe('server', function() {
         assert(r1.success);
         assert.strictEqual(r1.body.projID, 2);
       });
-      it('should show info about projects', async function() {
+      it('should show info about public projects', async function() {
         await doLogin(eCattermoul);
         const r1 = await json.post('/api/v1/project',
             util.range(0, 52));
