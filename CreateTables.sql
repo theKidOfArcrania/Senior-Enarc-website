@@ -1,5 +1,4 @@
-drop database if exists CSProjectSystem;
-create database CSProjectSystem;
+drop database if exists CSProjectSystem; create database CSProjectSystem;
 use CSProjectSystem;
 
 create table Company (
@@ -132,8 +131,8 @@ create table SkillsReq (
 
 create table HelpTicket (
 	hid int,
-  hStatus varchar(50),
-  hDescription varchar(100),
+  hStatus ENUM('open', 'closed', 'resolved') NOT NULL,
+  hDescription varchar(1000) NOT NULL,
   requestor int,
   PRIMARY KEY (hid),
   FOREIGN KEY (requestor) references Users (userID)
