@@ -301,13 +301,28 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notinteam');
       });
-
       it('should not duplicate project choices', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 8, 12]});
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'duplicatechoice');
+      });
+      it('should not have invalid project', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/team',
+            {choices: [8, 9, 5, 2, 12, 55]});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'invalidproject');
+      });
+      it('should successfully change password ', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/team',
+            {password: 'NewPassword'});
+        assert(r1.success);
+        const r2 = await json.put('/api/v1/team',
+            {password: null});
+        assert(r2.success);
       });
     });
     describe('/team/list', function() {
@@ -396,8 +411,6 @@ describe('server', function() {
         assert(r1.success);
       });
     });
-
-    // TODO: Test cases for changing passwords
   });
   describe('project', function() {
     describe('/project', function() {
