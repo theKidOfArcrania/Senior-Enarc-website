@@ -50,6 +50,7 @@ create table Faculty (
   FOREIGN KEY (fuid) references UTDPersonnel (uid) ON DELETE CASCADE
     ON UPDATE CASCADE,
   FOREIGN KEY (tid) references FacultyOrTeam (teamID)
+    ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 create table Student (
@@ -92,13 +93,16 @@ create table Project (
 
 create table Team (
 	tid int,
+  name varchar(50) NOT NULL UNIQUE,
   assignedProj int NULL UNIQUE,
   budget float NOT NULL,
   leader int,
+  membLimit int NOT NULL DEFAULT 5,
   password varchar(100),
   comments varchar(1000),
   PRIMARY KEY (tid),
-  FOREIGN KEY (tid) references FacultyOrTeam (teamID),
+  FOREIGN KEY (tid) references FacultyOrTeam (teamID)
+    ON UPDATE CASCADE ON DELETE CASCADE,
   FOREIGN KEY (assignedProj) references Project (projID)
     ON UPDATE CASCADE ON DELETE SET NULL,
   FOREIGN KEY (leader) references Student (suid)
@@ -149,44 +153,3 @@ add FOREIGN KEY (memberOf) references Team (tid) ON DELETE SET NULL;
 alter table Company
 add FOREIGN KEY (manager) references Employee(euid) ON DELETE SET NULL;
 
-DELIMITER $$
-CREATE TRIGGER Before_Team_Update
-BEFORE UPDATE
-ON Team FOR EACH ROW
-BEGIN
-  DECLARE leaderMemberOf INT;
-
-  -- Check that the new leader is part of the team
-  IF NOT ISNULL(NEW.leader) THEN
-    SELECT memberOf
-    INTO leaderMemberOf
-    FROM Student WHERE suid = NEW.leader;
-
-    IF leaderMemberOf != NEW.tid OR ISNULL(leaderMemberOf) THEN
-      SIGNAL SQLSTATE '45000' SET message_text = "New leader should be in team";
-    END IF;
-  END IF;
-END$$
-
-CREATE TRIGGER Before_Team_Insert
-BEFORE INSERT
-ON Team FOR EACH ROW
-BEGIN
-  IF NOT ISNULL(NEW.leader) THEN
-    SIGNAL SQLSTATE '45000' SET message_text = "New leader should be in team";
-  END IF;
-END$$
-
-CREATE TRIGGER Before_Student_Update
-BEFORE UPDATE ON Student FOR EACH ROW
-BEGIN
-  -- When a student leaves a team, quietly remove the leader if he's leader.
-  -- Note that this only happens if an admin makes some changes
-  IF (ISNULL(NEW.memberOf) AND NOT ISNULL(OLD.memberOf)) OR
-      NEW.memberOf <> OLD.memberOf THEN
-    UPDATE Team SET leader = NULL
-    WHERE tid = OLD.memberOf AND leader = OLD.suid;
-  END IF;
-END$$
-
-DELIMITER ;

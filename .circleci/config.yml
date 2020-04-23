@@ -27,6 +27,7 @@ commands:
             done
             echo Failed waiting for MySQL && exit 1
       - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTables.sql
+      - run: mysql -h 127.0.0.1 -u dbuser -pthisisasecurepassword < CreateTriggers.sql
 
 jobs:
   build-and-test:
