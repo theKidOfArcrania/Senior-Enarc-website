@@ -87,6 +87,7 @@ describe('server', function() {
   json.get = json.bind(null, 'GET');
   json.post = json.bind(null, 'POST');
   json.put = json.bind(null, 'PUT');
+  json.delete = json.bind(null, 'DELETE');
 
   /**
    * Extracts the credential information from the user info, identifying at a
@@ -289,6 +290,14 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notteamleader');
       });
+      it('should not allow changing team name to ' +
+          'already existing team name', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/team',
+            {name: 'Group 38'});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'badteamname');
+      });
       it('should not make non-member leader', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team', {leader: 9});
@@ -316,6 +325,39 @@ describe('server', function() {
         assert(r1.success);
         const r2 = await json.put('/api/v1/team',
             {password: null});
+        assert(r2.success);
+      });
+    });
+    describe('/team/member', function() {
+      it('should not allow non-leader to remove member', async function() {
+        await doLogin(eCattermoul);
+        const r1 = await json.delete('/api/v1/team/member',
+            [0]);
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notteamleader');
+      });
+      it('should not allow leader to remove self', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.delete('/api/v1/team/member',
+            [0]);
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'teamremoveself');
+      });
+      it('should not allow leader to remove non-member', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.delete('/api/v1/team/member',
+            [4]);
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notinteam');
+      });
+      it('should allow leader to remove member', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.delete('/api/v1/team/member',
+            [3]);
+        assert(r1.success);
+        await doLogin(eCattermoul);
+        const r2 = await json.post('/api/v1/team/join', {team: 39,
+          password: null});
         assert(r2.success);
       });
     });
@@ -361,6 +403,13 @@ describe('server', function() {
           password: null});
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'badteam');
+      });
+      it('should return team is full', async function() {
+        await doLogin(eDarline);
+        const r1 = await json.post('/api/v1/team/join', {team: 39,
+          password: null});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'teamfull');
       });
       it('should return team requires a password', async function() {
         await doLogin(eDarline);
@@ -431,6 +480,30 @@ describe('server', function() {
         assert.deepStrictEqual(keys, [1, 2, 3, 5, 6, 10, 15, 16, 18, 19, 24,
           25, 28, 33, 35, 36, 37, 40, 42, 44, 47, 48]);
       });
+      it('Project does not exist', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/project',
+            {projID: 51, pName: 'NewName'});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'badproject');
+      });
+      // it('should not allow modification of project ' +
+      //     'w/o permissions', async function() {
+      //   await doLogin(eDowley);
+      //   const r1 = await json.put('/api/v1/project',
+      //       {projID: 1, pName: 'NewName'});
+      //   assert(!r1.success);
+      //   assert.strictEqual(r1.body.debug, 'nopermproj');
+      // });
+      // it('project cannot be modified', async function() {
+      //   await doLogin(eDowley);
+      //   const r1 = await json.put('/api/v1/project',
+      //       {projID: 2, pName: 'NewName'});
+      //   assert(!r1.success);
+      //   assert.strictEqual(r1.body.debug, 'badstatus');
+      // });
+
+      // TODO: Create Project w/ modifiable status
     });
     describe('/project/submit', function() {
       it('should only allow managers to add projects', async function() {
@@ -485,6 +558,13 @@ describe('server', function() {
       });
     });
   });
+  // describe('admin', function() {
+  //   describe('/admin/', function() {
+  //     it('should not accept non-admin user', async function() {
+  //       await doLogin(eBrown);
+  //     });
+  //   });
+  // });
 });
 
 describe('dangling promises', require('./danglingTest.js'));
