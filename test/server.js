@@ -487,21 +487,21 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'badproject');
       });
-      // it('should not allow modification of project ' +
-      //     'w/o permissions', async function() {
-      //   await doLogin(eDowley);
-      //   const r1 = await json.put('/api/v1/project',
-      //       {projID: 1, pName: 'NewName'});
-      //   assert(!r1.success);
-      //   assert.strictEqual(r1.body.debug, 'nopermproj');
-      // });
-      // it('project cannot be modified', async function() {
-      //   await doLogin(eDowley);
-      //   const r1 = await json.put('/api/v1/project',
-      //       {projID: 2, pName: 'NewName'});
-      //   assert(!r1.success);
-      //   assert.strictEqual(r1.body.debug, 'badstatus');
-      // });
+      it('should not allow modification of project ' +
+          'w/o permissions', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/project',
+            {projID: 1, pName: 'NewName'});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'nopermproj');
+      });
+      it('project cannot be modified', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.put('/api/v1/project',
+            {projID: 2, pName: 'NewName'});
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'badstatus');
+      });
 
       // TODO: Create Project w/ modifiable status
     });
@@ -558,13 +558,16 @@ describe('server', function() {
       });
     });
   });
-  // describe('admin', function() {
-  //   describe('/admin/', function() {
-  //     it('should not accept non-admin user', async function() {
-  //       await doLogin(eBrown);
-  //     });
-  //   });
-  // });
+  describe('admin', function() {
+    describe('/admin/', function() {
+      it('should not accept non-admin user', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.get('/api/v1/admin/nonexistent');
+        assert(!r1.success);
+        assert.strictEqual(r1.body.debug, 'notadmin');
+      });
+    });
+  });
 });
 
 describe('dangling promises', require('./danglingTest.js'));
