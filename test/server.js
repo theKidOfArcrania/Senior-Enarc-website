@@ -415,7 +415,8 @@ describe('server', function() {
         const keys = Object.keys(r1.body)
             .map((n) => parseInt(n))
             .nsort();
-        assert.deepStrictEqual(keys, util.range(1, 51));
+        assert.deepStrictEqual(keys, [1, 2, 3, 5, 6, 10, 15, 16, 18, 19, 24,
+          25, 28, 33, 35, 36, 37, 40, 42, 44, 47, 48]);
       });
     });
     describe('/project/submit', function() {

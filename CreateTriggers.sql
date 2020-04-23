@@ -39,7 +39,7 @@ END$$
 
 -- Before each insert of a Student entity
 DROP TRIGGER IF EXISTS Before_Student_Insert$$
-CREATE TRIGGER Before_Student_Insert BEFORE INSERT ON Student FOR EACH ROW 
+CREATE TRIGGER Before_Student_Insert BEFORE INSERT ON Student FOR EACH ROW
 BEGIN
   -- Silently null out the memberOf member
   SET NEW.memberOf = NULL;
@@ -47,18 +47,18 @@ END$$
 
 -- Before each update of a Student entity
 DROP TRIGGER IF EXISTS Before_Student_Update$$
-CREATE TRIGGER Before_Student_Update BEFORE UPDATE ON Student FOR EACH ROW 
+CREATE TRIGGER Before_Student_Update BEFORE UPDATE ON Student FOR EACH ROW
 BEGIN
   DECLARE memberCnt INT;
   DECLARE memberLim INT;
 
   -- When the memberOf property changed...
   IF NOT(NEW.memberOf <=> OLD.memberOf) THEN
-    -- First check whether if the team limit exceeded for the team the student 
+    -- First check whether if the team limit exceeded for the team the student
     SELECT COUNT(*) INTO memberCnt FROM Student WHERE memberOf = NEW.memberOf;
     SELECT membLimit INTO memberLim FROM Team WHERE tid = NEW.memberOf;
     IF memberCnt >= memberLim THEN
-      SET @msg = CONCAT("This team is already at the max limit of ", memberLim, 
+      SET @msg = CONCAT("This team is already at the max limit of ", memberLim,
         "students");
       SIGNAL SQLSTATE '45000' SET message_text = @msg;
     END IF;

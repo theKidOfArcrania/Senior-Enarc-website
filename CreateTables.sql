@@ -81,7 +81,8 @@ create table Project (
   mentor int NOT NULL,
   sponsor int NOT NULL,
   advisor int,
-  status varchar(15) NOT NULL,
+  status ENUM('submitted', 'needs-revision', 'accepted', 'rejected',
+    'archived') NOT NULL,
   visible boolean NOT NULL,
   PRIMARY KEY (projID),
   FOREIGN KEY (company) references Company (name)
