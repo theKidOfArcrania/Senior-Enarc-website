@@ -1,5 +1,4 @@
-drop database if exists CSProjectSystem;
-create database CSProjectSystem;
+drop database if exists CSProjectSystem; create database CSProjectSystem;
 use CSProjectSystem;
 
 create table Company (
@@ -78,8 +77,8 @@ create table Project (
   image varchar(100),
   projDoc varchar(100),
   pDesc varchar(1000),
-  mentor int NOT NULL,
-  sponsor int NOT NULL,
+  mentor int,
+  sponsor int,
   advisor int,
   status ENUM('submitted', 'needs-revision', 'accepted', 'rejected',
     'archived') NOT NULL,
@@ -87,8 +86,10 @@ create table Project (
   PRIMARY KEY (projID),
   FOREIGN KEY (company) references Company (name)
     ON UPDATE CASCADE ON DELETE CASCADE,
-  FOREIGN KEY (mentor) references Employee (euid),
-  FOREIGN KEY (sponsor) references Employee (euid),
+  FOREIGN KEY (mentor) references Employee (euid)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  FOREIGN KEY (sponsor) references Employee (euid)
+    ON UPDATE CASCADE ON DELETE SET NULL,
   FOREIGN KEY (advisor) references Faculty (fuid)
     ON UPDATE CASCADE ON DELETE SET NULL
 );
@@ -132,8 +133,8 @@ create table SkillsReq (
 
 create table HelpTicket (
 	hid int,
-  hStatus varchar(50),
-  hDescription varchar(100),
+  hStatus ENUM('open', 'closed', 'resolved') NOT NULL,
+  hDescription varchar(1000) NOT NULL,
   requestor int,
   PRIMARY KEY (hid),
   FOREIGN KEY (requestor) references Users (userID)
