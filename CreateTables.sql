@@ -77,8 +77,8 @@ create table Project (
   image varchar(100),
   projDoc varchar(100),
   pDesc varchar(1000),
-  mentor int NOT NULL,
-  sponsor int NOT NULL,
+  mentor int,
+  sponsor int,
   advisor int,
   status ENUM('submitted', 'needs-revision', 'accepted', 'rejected',
     'archived') NOT NULL,
@@ -86,8 +86,10 @@ create table Project (
   PRIMARY KEY (projID),
   FOREIGN KEY (company) references Company (name)
     ON UPDATE CASCADE ON DELETE CASCADE,
-  FOREIGN KEY (mentor) references Employee (euid),
-  FOREIGN KEY (sponsor) references Employee (euid),
+  FOREIGN KEY (mentor) references Employee (euid)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  FOREIGN KEY (sponsor) references Employee (euid)
+    ON UPDATE CASCADE ON DELETE SET NULL,
   FOREIGN KEY (advisor) references Faculty (fuid)
     ON UPDATE CASCADE ON DELETE SET NULL
 );
