@@ -8,14 +8,14 @@ create table Company (
   PRIMARY KEY (name)
 );
 create table Users (
-	userId int NOT NULL,
+	userID int NOT NULL,
   fname varchar(50) NOT NULL,
   lname varchar(50) NOT NULL,
   email varchar(100) NOT NULL UNIQUE,
   address varchar(100) NOT NULL,
   isUtd boolean NOT NULL,
   isEmployee boolean NOT NULL,
-  PRIMARY KEY (userId)
+  PRIMARY KEY (userID)
 );
 
 create table Employee (
@@ -23,7 +23,7 @@ create table Employee (
   worksAt varchar(50) NOT NULL,
   password varchar(100) NOT NULL,
   PRIMARY KEY (euid),
-  FOREIGN KEY (euid) references Users(userId) ON UPDATE CASCADE ON DELETE CASCADE,
+  FOREIGN KEY (euid) references Users(userID) ON UPDATE CASCADE ON DELETE CASCADE,
   FOREIGN KEY (worksAt) references Company(name) ON UPDATE CASCADE
 );
 

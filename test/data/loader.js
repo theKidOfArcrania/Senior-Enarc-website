@@ -4,7 +4,7 @@ const util = require('../../lib/util.js');
 
 const tables = [
   ['COMPANY', 'Company', 'name'],
-  ['USER', 'User', 'userId'],
+  ['USER', 'User', 'userID'],
   ['EMPLOYEE', 'Employee', 'euid'],
   ['UTD_PERSONNEL', 'UTD', 'uid'],
   ['FACULTY', 'Faculty', 'fuid'],

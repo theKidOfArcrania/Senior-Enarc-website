@@ -223,7 +223,7 @@ describe('server', function() {
 
         let found;
         for (const m of r1.body.members) {
-          if (m.userId === 0) {
+          if (m.userID === 0) {
             found = m;
             break;
           }
@@ -244,7 +244,7 @@ describe('server', function() {
         const r1 = await json.get('/api/v1/team');
         assert(r1.success);
         for (const m of r1.body.members) {
-          assert.notStrictEqual(m.userId, 6);
+          assert.notStrictEqual(m.userID, 6);
         }
       });
       it('dowley can access own teams only', async function() {
@@ -530,7 +530,7 @@ describe('server', function() {
         assert(r3.success);
 
         const actual = r3.body[added];
-        // TODO: check what happened to userId???
+        // TODO: check what happened to userID???
         actual.mentor = actual.mentor.uid;
         actual.sponsor = actual.sponsor.uid;
 

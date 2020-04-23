@@ -69,7 +69,7 @@ function verifyModel(db) {
     it('begin with commit will keep changes', async function() {
       help = {
         hid: 61337,
-        hStatus: 'none',
+        hStatus: 'open',
         hDescription: 'Hello world!',
         requestor: 0,
       };
@@ -86,7 +86,7 @@ function verifyModel(db) {
     it('restore only respective SP', async function() {
       help = {
         hid: 31337,
-        hStatus: 'none',
+        hStatus: 'open',
         hDescription: 'Hello world!',
         requestor: 0,
       };
@@ -96,7 +96,7 @@ function verifyModel(db) {
       await model.restoreSP();
       assert.deepStrictEqual(await model.loadHelpTicketInfo(help.hid), help);
       await model.restoreSP();
-      assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'test'})));
+      assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'closed'})));
     });
   });
 
@@ -230,7 +230,7 @@ function verifyModel(db) {
             checkType(empFilt, user.Employee));
 
         const should = ['fname', 'lname', 'email', 'address', 'isUtd',
-          'isEmployee', 'userId'];
+          'isEmployee', 'userID'];
         const maybe = ['employee', 'utd', 'uid', 'teams'];
         checkUserProps(it, (x) => x, db2.USER, should, maybe);
       });
