@@ -423,14 +423,14 @@ describe('server', function() {
       it('should only allow managers to add projects', async function() {
         await doLogin(eDowley);
         const r1 = await json.post('/api/v1/project/submit',
-            {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 2,
+            {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
               image: null, projDoc: null});
         assert(!r1.success);
         assert.strictEqual(r1.body.debug, 'notmanager');
       });
       it('should successfully add project', async function() {
         await doLogin(eKrystal);
-        proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 2,
+        proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
           image: null, projDoc: null};
         const r1 = await json.post('/api/v1/project/submit', proj);
         assert(r1.success);

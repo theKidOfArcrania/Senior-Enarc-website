@@ -87,9 +87,10 @@ create table Project (
   PRIMARY KEY (projID),
   FOREIGN KEY (company) references Company (name)
     ON UPDATE CASCADE ON DELETE CASCADE,
-  FOREIGN KEY (mentor) references Users (userID),
-  FOREIGN KEY (sponsor) references Users (userID),
+  FOREIGN KEY (mentor) references Employee (euid),
+  FOREIGN KEY (sponsor) references Employee (euid),
   FOREIGN KEY (advisor) references Faculty (fuid)
+    ON UPDATE CASCADE ON DELETE SET NULL
 );
 
 create table Team (
@@ -136,6 +137,7 @@ create table HelpTicket (
   requestor int,
   PRIMARY KEY (hid),
   FOREIGN KEY (requestor) references Users (userID)
+    ON UPDATE CASCADE ON DELETE SET NULL
 );
 
 create table Invite (

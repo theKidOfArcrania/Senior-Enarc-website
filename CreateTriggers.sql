@@ -72,4 +72,12 @@ BEGIN
   END IF;
 END$$
 
+-- After deletion of faculty entity
+DROP TRIGGER IF EXISTS After_Faculty_Delete$$
+CREATE TRIGGER After_Faculty_Delete AFTER DELETE ON Faculty FOR EACH ROW
+BEGIN
+  -- Delete the FacultyOrTeam entry
+  DELETE FROM FacultyOrTeam WHERE teamID = old.tid;
+END$$
+
 DELIMITER ;
