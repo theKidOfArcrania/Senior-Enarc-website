@@ -150,7 +150,7 @@ describe('server', function() {
         password: eBrownPass});
       assert.strictEqual(agent.jar.getCookies().length, 0);
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'nonemployee');
+      assert.strictEqual(r1.body.debug, 'notemployee');
     });
 
     it('logout should no longer have session', async function() {
@@ -316,7 +316,7 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 12, 55]});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'invalidproject');
+        assert.strictEqual(r1.body.debug, 'badproj');
       });
       it('should successfully change password ', async function() {
         await doLogin(eDowley);
@@ -460,8 +460,8 @@ describe('server', function() {
       it('should return no projects to view', async function() {
         await doLogin(eBrown);
         const r1 = await json.get('/api/v1/project');
-        assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'noproj');
+        assert(r1.success);
+        assert.strictEqual(r1.body, null);
       });
       it('should return first project for this user', async function() {
         await doLogin(eDowley);
@@ -485,7 +485,7 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/project',
             {projID: 51, pName: 'NewName'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badproject');
+        assert.strictEqual(r1.body.debug, 'badproj');
       });
       it('should not allow modification of project ' +
           'w/o permissions', async function() {
@@ -506,13 +506,13 @@ describe('server', function() {
       // TODO: Create Project w/ modifiable status
     });
     describe('/project/submit', function() {
-      it('should only allow managers to add projects', async function() {
-        await doLogin(eDowley);
+      it('should only allow employees to add projects', async function() {
+        await doLogin(eCattermoul);
         const r1 = await json.post('/api/v1/project/submit',
             {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
               image: null, projDoc: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notmanager');
+        assert.strictEqual(r1.body.debug, 'notemployee');
       });
       it('should successfully add project', async function() {
         await doLogin(eKrystal);
