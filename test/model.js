@@ -69,7 +69,7 @@ function verifyModel(db) {
     it('begin with commit will keep changes', async function() {
       help = {
         hid: 61337,
-        hStatus: 'none',
+        hStatus: 'open',
         hDescription: 'Hello world!',
         requestor: 0,
       };
@@ -86,7 +86,7 @@ function verifyModel(db) {
     it('restore only respective SP', async function() {
       help = {
         hid: 31337,
-        hStatus: 'none',
+        hStatus: 'open',
         hDescription: 'Hello world!',
         requestor: 0,
       };
@@ -96,7 +96,7 @@ function verifyModel(db) {
       await model.restoreSP();
       assert.deepStrictEqual(await model.loadHelpTicketInfo(help.hid), help);
       await model.restoreSP();
-      assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'test'})));
+      assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'closed'})));
     });
   });
 
@@ -104,7 +104,6 @@ function verifyModel(db) {
     const loads = [
       ['COMPANY', 'Company'],
       ['EMPLOYEE', 'Employee'],
-      ['FACULTY', 'Faculty'],
       ['HELP_TICKET', 'HelpTicket'],
       ['PROJECT', 'Project'],
       ['STUDENT', 'Student'],
@@ -231,7 +230,7 @@ function verifyModel(db) {
             checkType(empFilt, user.Employee));
 
         const should = ['fname', 'lname', 'email', 'address', 'isUtd',
-          'isEmployee', 'userId'];
+          'isEmployee', 'userID'];
         const maybe = ['employee', 'utd', 'uid', 'teams'];
         checkUserProps(it, (x) => x, db2.USER, should, maybe);
       });
@@ -259,7 +258,7 @@ function verifyModel(db) {
 
       describe('Faculty', function() {
         const should = ['tid'];
-        const maybe = ['uid'];
+        const maybe = ['uid', 'choices'];
         it('should exist', exists(facFilt));
         checkUserProps(it, facFilt, db2.FACULTY, should, maybe);
       });
@@ -315,11 +314,10 @@ function verifyModel(db) {
     const alters = [
       ['Company', 'Shufflebeat', {logo: 'abcde'}],
       ['Employee', 1, {password: 'abcde'}],
-      ['Faculty', 1, {tid: 102}],
       ['HelpTicket', 1, {requestor: 1}],
       ['Project', 1, {advisor: 1}],
       ['Student', 0, {major: 'no nonsense'}],
-      ['Team', 1, {leader: 0}],
+      ['Team', 39, {leader: 3}],
       ['UTD', 1, {isAdmin: true}],
       ['User', 0, {fname: 'John'}],
     ];
