@@ -230,8 +230,8 @@ export function log(...msg): void {
   }
 }
 
-type Jsonable = number | boolean | null | undefined | {[P: string]: Jsonable} |
-  Jsonable[];
+export type Jsonable = number | boolean | null | undefined |
+  {[P: string]: Jsonable} | Jsonable[];
 
 /**
  * Makes a deep copy of an object using a serialization/deserializaion JSON

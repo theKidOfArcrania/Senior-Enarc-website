@@ -1,10 +1,12 @@
+import type * as db from './dbtypes';
+
 export enum UTDType {
   STUDENT = 'student',
   STAFF = 'staff',
   FACULTY = 'faculty',
 }
 
-export interface User { 
+export interface User {
   userID: number;
   uid: number;
   fname: string;
@@ -13,42 +15,59 @@ export interface User {
   address: string;
   isUtd: boolean;
   isEmployee: boolean;
+  teams: number[];
 
   employee: Employee|null;
   utd: UTDPersonnel|null;
 }
 
-export interface UTDPersonnel {
+export interface Uent {
   uid: number;
+
+  /*
+   * @param conn - the DB transaction connection
+   */
+  reload<T>(conn: db.DatabaseTransaction<T>): Promise<void>;
+
+  /**
+   * Normalizes and flattens all the properties of a user into a JSON object.
+   */
+  normalize(): this;
+}
+
+export interface UTDPersonnel extends Uent {
   uType: UTDType;
   netID: string;
   isAdmin: boolean;
+
+  student: Student;
+  faculty: Faculty;
+  staff: Staff;
 }
 
-export interface Employee {
-  uid: number;
+export interface Employee extends Uent {
   worksAt: string;
   password: string;
 }
 
-export interface Student {
-  uid: number;
+export interface Student extends Uent {
   major: string;
   resume: string;
   memberOf: number;
 }
 
-export interface Faculty {
-  uid: number;
+export type Staff = Uent;
+
+export interface Faculty extends Uent {
   tid: number;
 }
 
 declare global {
-  namespace Express {
+  namespace Express { // eslint-disable-line @typescript-eslint/no-namespace
     interface Request {
       user: User;
       employee: Employee;
-      student: Student;      
+      student: Student;
     }
   }
 }

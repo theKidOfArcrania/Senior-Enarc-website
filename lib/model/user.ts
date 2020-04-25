@@ -1,17 +1,19 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
+
 import type * as typ from './usertypes';
 import {UTDType as utypes} from './usertypes';
-
+import type * as db from './dbtypes';
 
 /**
  * Syntactical function to reload some field's value or to initialize it if it
  * doesn't exist.
- * @param {Connection} conn  the DB connection
- * @param {Object}     obj   the object
- * @param {String}     fld   field name to reload/initialize on obj
- * @param {Function} Otherwise   the constructor for initialization
+ * @param conn - the DB connection
+ * @param obj - the object
+ * @param fld - field name to reload/initialize on obj
+ * @param Otherwise - the constructor for initialization
  */
-async function doReloadOr(conn, obj: object, fld: string, 
-    Otherwise: () => void) {
+async function doReloadOr(conn, obj: object, fld: string,
+    Otherwise: () => void): Promise<void> {
   let val = obj[fld];
   if (!val) {
     val = new Otherwise();
@@ -24,22 +26,23 @@ async function doReloadOr(conn, obj: object, fld: string,
   await val.reload(conn);
 }
 
-const norm = (obj) => obj && obj.normalize();
+const norm = (obj): object => obj && obj.normalize();
 
 /**
  * Obtains the list of teams that this user is a member of, including
  * advising/mentor/sponsor/student roles.
- * @param {Connection} conn   the DB connection
- * @param {User}       u      the user to query teams.
- * @return {Number[]} a list of team IDs.
+ * @param conn - the DB connection
+ * @param u - the user to query teams.
  */
-async function getMyTeams(conn, u) {
-  const tids = [];
+async function getMyTeams<T>(conn: db.DatabaseTransaction<T>, u):
+    Promise<number[]> {
+  const tids: number[] = [];
 
   // Search for all per-project roles
   const pids = await conn.findManagesProject(u.userID);
-  tids.push(...(await Promise.all(pids.map(
-      conn.findProjectAssignedTeam.bind(conn)))));
+  for (const pid of pids) {
+    tids.push(await conn.findProjectAssignedTeam(pid));
+  }
 
   // Search for memberOf role
   if (u.isUtd && u.utd.uType === utypes.STUDENT) {
@@ -56,22 +59,25 @@ async function getMyTeams(conn, u) {
 /**
  * An abstract user entity
  */
-class Uent {
+abstract class Uent implements typ.Uent {
   uid: number;
 
   /**
    * Creates a user entity from a uid
-   * @param {String} uid   the user ID to associate with this user
    */
   constructor(uid) {
     Object.defineProperty(this, 'uid', {writable: false, value: uid});
   }
 
   /**
-   * Normalizes and flattens all the properties of a user into a JSON object.
-   * @return {Object} a JSON-able representation of this user.
+   * @param conn - the DB transaction connection
    */
-  normalize() {
+  abstract async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void>;
+
+  /**
+   * Normalizes and flattens all the properties of a user into a JSON object.
+   */
+  normalize(): this {
     const ret = Object.assign({}, this);
     delete ret.uid;
     return ret;
@@ -86,11 +92,17 @@ class User extends Uent implements typ.User {
   fname: string;
   lname: string;
   email: string;
+  address: string;
+  isUtd: boolean;
+  isEmployee: boolean;
 
+  employee: typ.Employee|null;
+  utd: typ.UTDPersonnel|null;
+  teams: number[];
 
   /**
    * Creates a user from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * @param uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -99,10 +111,9 @@ class User extends Uent implements typ.User {
 
   /**
    * (Re)loads the user information associated with this uid.
-   * @param {Connection} conn   the DB connection
-   * @return {Promise} a promise on successful loading of database
+   * @param conn - the DB transaction connection
    */
-  async reload(conn) {
+  async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     Object.assign(this, await conn.loadUserInfo(this.uid));
     if (this.isEmployee) {
       await doReloadOr(conn, this, 'employee', Employee.bind(null, this.uid));
@@ -115,9 +126,8 @@ class User extends Uent implements typ.User {
 
   /**
    * Normalizes and flattens all the properties of a user into a JSON object.
-   * @return {Object} a JSON-able representation of this user.
    */
-  normalize() {
+  normalize(): this {
     const ret = super.normalize();
     delete ret.employee;
     delete ret.utd;
@@ -130,10 +140,14 @@ class User extends Uent implements typ.User {
 /**
  * Represents the employee data
  */
-class Employee extends Uent {
+class Employee extends Uent implements typ.Employee {
+  uid: number;
+  worksAt: string;
+  password: string;
+
   /**
    * Creates an employee from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * @param uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -141,9 +155,9 @@ class Employee extends Uent {
 
   /**
    * (Re)loads the employee information associated with this uid.
-   * @param {Connection} conn   the DB connection
+   * @param conn - the database connection
    */
-  async reload(conn) {
+  async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadEmployeeInfo(this.uid);
     delete res.euid;
     Object.assign(this, res);
@@ -153,10 +167,17 @@ class Employee extends Uent {
 /**
  * Represents the UTD personnel data
  */
-class UTDPersonnel extends Uent {
+class UTDPersonnel extends Uent implements typ.UTDPersonnel {
+  uType: typ.UTDType;
+  netID: string;
+  isAdmin: boolean;
+  student: typ.Student;
+  faculty: typ.Faculty;
+  staff: typ.Staff;
+
   /**
    * Creates an UTD personnel from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * @param uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -164,22 +185,21 @@ class UTDPersonnel extends Uent {
 
   /**
    * (Re)loads the UTD personnel information associated with this uid.
-   * @param {Connection} conn   the DB connection
+   * @param conn - the DB connection
    */
-  async reload(conn) {
+  async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadUTDInfo(this.uid);
     delete res.uid;
     Object.assign(this, res);
 
-    const t = UTDPersonnel.types;
     switch (this.uType) {
-      case t.STUDENT:
+      case utypes.STUDENT:
         await doReloadOr(conn, this, 'student', Student.bind(null, this.uid));
         break;
-      case t.STAFF:
+      case utypes.STAFF:
         await doReloadOr(conn, this, 'staff', Staff.bind(null, this.uid));
         break;
-      case t.FACULTY:
+      case utypes.FACULTY:
         await doReloadOr(conn, this, 'faculty', Faculty.bind(null, this.uid));
         break;
     }
@@ -188,9 +208,8 @@ class UTDPersonnel extends Uent {
   /**
    * Normalizes and flattens all the properties of a UTD entity into a JSON
    * object.
-   * @return {Object} a JSON-able representation of this user.
    */
-  normalize() {
+  normalize(): this {
     const ret = super.normalize();
     delete ret.staff;
     Object.assign(ret, norm(this.staff));
@@ -202,20 +221,18 @@ class UTDPersonnel extends Uent {
   }
 }
 
-UTDPersonnel.types = {
-  STUDENT: 'student',
-  STAFF: 'staff',
-  FACULTY: 'faculty',
-};
-
 /**
  * Represents a student. The students select projects to do and chooses to join
  * certain teams.
  */
-class Student extends Uent {
+class Student extends Uent implements typ.Student {
+  major: string;
+  resume: string;
+  memberOf: number;
+
   /**
    * Creates an student data from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * @param uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -223,9 +240,9 @@ class Student extends Uent {
 
   /**
    * Reloads the student information associated with this uid.
-   * @param {Connection} conn   the DB connection
+   * @param conn - the DB transaction connection
    */
-  async reload(conn) {
+  async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadStudentInfo(this.uid);
     delete res.suid;
     Object.assign(this, res);
@@ -236,10 +253,12 @@ class Student extends Uent {
  * Represents a faculty. The faculty is allowed a selection of projects (along
  * with the students) to facillate projects of their choosing.
  */
-class Faculty extends Uent {
+class Faculty extends Uent implements typ.Faculty {
+  tid: number;
+
   /**
    * Creates an faculty data from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * @param uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -247,9 +266,9 @@ class Faculty extends Uent {
 
   /**
    * (Re)loads the faculty information associated with this uid.
-   * @param {Connection} conn   the DB connection
+   * @param conn - the DB transaction connection
    */
-  async reload(conn) {
+  async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadFacultyInfo(this.uid);
     delete res.fuid;
     Object.assign(this, res);
@@ -263,7 +282,7 @@ class Faculty extends Uent {
 class Staff extends Uent {
   /**
    * Creates a staff data from a uid
-   * @param {String} uid   the user ID to associate with this user
+   * uid - the user ID to associate with this user
    */
   constructor(uid) {
     super(uid);
@@ -271,10 +290,9 @@ class Staff extends Uent {
 
   /**
    * (Re)loads the faculty information associated with this uid.
-   * @param {Connection} conn   the DB connection
-   * @return {Promise} a promise on successful loading of database
+   * @param conn - the DB connection
    */
-  reload(conn) {
+  reload(): Promise<void> {
     // Nothing to load
     return Promise.resolve();
   }
