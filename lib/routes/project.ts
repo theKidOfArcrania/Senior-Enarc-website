@@ -13,7 +13,7 @@ const r = new express.Router();
  * Obtains a list of projects that this user is a member of or manages.
  * @param {Transaction} tr   the transaction object
  * @param {Object}      u   the user.
- * @return {Integer[]} a list of project IDs.
+ * @return {Number[]} a list of project IDs.
  */
 async function partOfProjs(tr, u) {
   const pids = new Set(await tr.findManagesProject(u.userID));
@@ -79,7 +79,7 @@ async function projectRestrictionLevel(tr, u, p) {
 /**
  * Loads the public information of a user
  * @param {Transaction} tr  the transaction object
- * @param {Integer}     uid the uid of the user. If null, this will return null
+ * @param {Number}     uid the uid of the user. If null, this will return null
  * @return {Object} the user object that can be JSON'ed.
  */
 async function loadUser(tr, uid) {
@@ -95,7 +95,7 @@ async function loadUser(tr, uid) {
  * Loads the team, loading all aggregate data that is allowed for this user.
  * @param {Transaction} tr   the transaction object
  * @param {Object}      u    the user requesting this project data.
- * @param {Integer}     pid  the project ID to load.
+ * @param {Number}     pid  the project ID to load.
  * @return {Object} the processed data, or null if the user has insufficient
  *     permissions to view anything
  */

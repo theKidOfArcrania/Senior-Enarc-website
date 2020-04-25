@@ -1,19 +1,36 @@
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
-const _utils = require('util');
-const promisify = _utils.promisify;
-const config = require('./config.js');
-const uid = new (require('nodejs-snowflake').UniqueID)({returnAsNumber: false});
-const utypes = require('./model/user.js').UTDPersonnel.types;
-const msg = require('./msg.js');
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
+import * as _utils from 'util';
+import { setTimeout } from 'timers';
 
+import config from './config';
+
+
+const {promisify} = _utils;
+const uid = new (require('nodejs-snowflake').UniqueID)({returnAsNumber: false});
+
+/**
+ * Similar to a promisified setTimeout function, with one exception, if a
+ * negative timeout is given, this will result in an indefinite wait.
+ * @param timeout - the timeout time to wait.
+ */
+export async function until(timeout: number): Promise<void> {
+  if (timeout < 0) {
+    return new Promise(() => undefined);
+  } else {
+    await promisify(setTimeout)(timeout);
+  }
+}
 
 /**
  * This is a simple re-entrant lock used to asynchronously wait for a lock. Note
  * that due to how Javascript threading works, nested locks DO NOT WORK. DO NOT
  * ATTEMPT to do so because that will result in a deadlock.
  */
-class Reentrant {
+export class Reentrant {
+  locked: boolean;
+  _waitqueue: ((...args: any) => void)[];
+
   /**
    * Creates a new reentrant lock
    */
@@ -26,14 +43,13 @@ class Reentrant {
    * Attempts to take the lock. By default it will not wait at all, but if
    * supplied a positive timeout, it will wait that number of milliseconds to
    * take the lock.
-   * @param {Integer} timeout    a timeout to wait in milliseconds. If positive,
-   *                             waits for that time. If 0, it will return
-   *                             immediately. Otherwise, if negative, it will
-   *                             wait indefinitely.
+   * @param timeout - a timeout to wait in milliseconds. If positive, waits for 
+   *                  that time. If 0, it will return immediately. Otherwise, 
+   *                  if negative, it will wait indefinitely.
    */
-  async tryLock(timeout = 0) {
+  async tryLock(timeout = 0): Promise<boolean> {
     let timedOut = false;
-    const _this = this;
+    const _this = this; 
 
     if (!this.locked) {
       this.locked = true;
@@ -58,7 +74,7 @@ class Reentrant {
   /**
    * Convenience method for .tryLock(-1)
    */
-  async lock() {
+  async lock(): Promise<void> {
     await this.tryLock(-1);
   }
 
@@ -66,7 +82,7 @@ class Reentrant {
    * Releases the lock on this reentrant instance, and notifies the next waiter
    * on the queue.
    */
-  unlock() {
+  unlock(): void {
     if (!this.locked) throw new Error('This is not locked to begin with');
     if (this._waitqueue.length) {
       const waiting = this._waitqueue.shift();
@@ -80,13 +96,12 @@ class Reentrant {
 
 /**
  * Create a range of numbers similar to python's range function.
- * @param {Number} lower    the lower bound (if omitted, defaults to 0)
- * @param {Number} upper    the upper bound
- * @param {Number} skip     the amount to increment per iteration.
- * @return {Number[]} a number list
+ * @param lower - the lower bound (if omitted, defaults to 0)
+ * @param upper - the upper bound
+ * @param skip - the amount to increment per iteration.
  */
-function range(lower, upper, skip) {
-  ret = [];
+export function range(lower: number, upper?: number, skip?: number): number[] {
+  const ret = [];
   if (skip === undefined) {
     skip = 1;
 
@@ -105,20 +120,18 @@ function range(lower, upper, skip) {
  * Returns a random alphanumeric ID that's roughly time-sortable and guarenteed
  * to be unique It is also guarenteed to be cryptographically secure/not
  * guessable.
- * @return {String} an alphanumeric unique ID
  */
-function randomID() {
-  return uid.getUniqueID() + crypto.randomBytes(8).hexSlice();
+export function randomID(): string {
+  return uid.getUniqueID() + crypto.randomBytes(8).toString('hex');
 }
 
 /**
- * Copy object attributes
- * @param {Object} dst      the destination objecct
- * @param {Object} src      the source objecct
- * @param {Object} attribs  the attribute/default values to copy
- * @return {Object} destination object
+ * Copy object attributes 
+ * @param dst - the destination objecct
+ * @param src - the source objecct
+ * @param attribs - the attribute/default values to copy
  */
-function copyAttribs(dst, src, attribs) {
+export function copyAttribs(dst: object, src: object, attribs: object): object {
   for (const prop of Object.getOwnPropertyNames(attribs)) {
     dst[prop] = (src[prop] !== undefined) ? src[prop] : attribs[prop];
   }
@@ -127,16 +140,22 @@ function copyAttribs(dst, src, attribs) {
 
 /**
  * Gets all the property names (enumerable or not, own properties or not).
- * @param {Object} obj   the object
- * @return {String[]} a list of property names
+ * @param obj - the object
  */
-function getAllPropertyNames(obj) {
-  const result = new Set();
+export function getAllPropertyNames(obj: object): string[] {
+  const result: Set<string> = new Set();
   while (obj) {
     Object.getOwnPropertyNames(obj).forEach((p) => result.add(p));
     obj = Object.getPrototypeOf(obj);
   }
-  return [...result];
+  const ret: string[] = [];
+  result.forEach((e) => ret.push(e));
+  return ret;
+}
+
+export type PromisifiedObj<T> = {
+  // We probably could use some typescript voodoo to get the exact mapped type
+  [P in keyof T]: T[P] extends Function ? Function : T[P]
 }
 
 /**
@@ -145,14 +164,13 @@ function getAllPropertyNames(obj) {
  * object prototype are wrapped with promisify. Note that some functions in the
  * promisify'ed object might not expect an extra callback parameter, so use the
  * original object to call those functions!
- * @param {Object} obj    the input object
- * @return {Object} a promisify'ed object
+ * @param obj - the input object
  */
-function promisifyObj(obj) {
+export function promisifyObj<T>(obj: T): PromisifiedObj<T> {
   /**
    * Constructor representing an promisified object.
    */
-  function Promisified() {
+  function Promisified(): void {
     // Make a getter/setter pair to the original object for convenience
     for (const name of Object.getOwnPropertyNames(obj)) {
       Object.defineProperty(this, name,
@@ -160,7 +178,6 @@ function promisifyObj(obj) {
             set: (val) => obj[name] = val});
     }
   }
-
 
   const ret = new Promisified();
 
@@ -180,74 +197,28 @@ function promisifyObj(obj) {
 
 /**
  * Computes the bcrypt hash for a particular password (asynchronously).
- * @param {String} passwd    the password to compute a hash on
- * @return {String} the resulting password as a bcrypt hash string.
+ * Returning the resulting hashed password
+ * @param passwd -  the password to compute a hash on
  */
-async function hashPassword(passwd) {
+export async function hashPassword(passwd: string): Promise<string> {
   return await bcrypt.hash(passwd, config.BCRYPT_ROUNDS);
 }
 
 /**
  * Verifies that the password and hash matches (asynchronously).
- * @param {String} passwd    the password
- * @param {String} hash      the bcrypt hash
- * @return {Boolean} true if valid, false if invalid
+ * @param passwd - the password
+ * @param hash - the bcrypt hash
  */
-async function chkPassword(passwd, hash) {
+export async function chkPassword(passwd: string, hash: string): Promise<boolean> {
   return await bcrypt.compare(passwd, hash);
 }
 
-/**
- * Middleware function that will check that a user is logged in or not
- * @param {Object} req    the request object
- * @param {Object} res    the response object
- * @param {Object} next   calls next middleware in the chain.
- */
-function login(req, res, next) {
-  if (req.user) {
-    next();
-  } else {
-    res.json(msg.fail('You are not logged in!', 'nologin'));
-  }
-}
-
-/**
- * Middleware function that will check that a user is a student.
- * @param {Object} req    the request object
- * @param {Object} res    the response object
- * @param {Object} next   calls next middleware in the chain.
- */
-function student(req, res, next) {
-  u = req.user;
-  if (u && u.isUtd && u.utd.uType === utypes.STUDENT) {
-    req.student = u.utd.student;
-    next();
-  } else {
-    res.json(msg.fail('You must be a student!', 'notstudent'));
-  }
-}
-
-/**
- * Middleware function that will check that a user is an employee.
- * @param {Object} req    the request object
- * @param {Object} res    the response object
- * @param {Object} next   calls next middleware in the chain.
- */
-function employee(req, res, next) {
-  u = req.user;
-  if (u && u.isEmployee) {
-    req.employee = u.employee;
-    next();
-  } else {
-    res.json(msg.fail('You must be an employee!', 'notemployee'));
-  }
-}
 
 /**
  * Wrapper log function for console.log, which will suppress output during
  * testing
  */
-function log(...msg) {
+export function log(...msg): void {
   if (!config.TESTING) {
     if (msg.length === 0) {
       console.log(undefined);
@@ -259,62 +230,58 @@ function log(...msg) {
   }
 }
 
+type Jsonable = number | boolean | null | undefined | {[P: string]: Jsonable} |
+  Jsonable[];
+
 /**
  * Makes a deep copy of an object using a serialization/deserializaion JSON
  * technique. This works for basic objects/strings/arrays/numbers. This does NOT
  * work for complex objects (i.e. objects with special constructors, etc.).
- * @param {Object} obj     a simple object to clone.
- * @return {Object} the cloned object.
+ * @param obj - a simple object to clone.
  */
-function deepJSONCopy(obj) {
+export function deepJSONCopy<O extends Jsonable>(obj: O): O {
   return JSON.parse(JSON.stringify(obj));
-}
-
-/**
- * Similar to a promisified setTimeout function, with one exception, if a
- * negative timeout is given, this will result in an indefinite wait.
- * @param {Integer} timeout     the timeout time to wait.
- */
-async function until(timeout) {
-  if (timeout < 0) {
-    return new Promise(() => false);
-  } else {
-    await promisify(setTimeout)(timeout);
-  }
 }
 
 /**
  * Sets a default value of property in object if that property evaluates to
  * undefined or null.
- * @param {Object} obj         the object
- * @param {String} prop        the property name
- * @param {Object} defaultVal  the default value if current value is
- *                             undefined/null
+ * @param obj - the object
+ * @param prop - the property name
+ * @param defaultVal - the default value if current value is undefined/null
  */
-function objDefault(obj, prop, defaultVal) {
-  if (obj[prop] === null || obj[prop] === undefined) {
-    obj[prop] = defaultVal;
+export function objDefault(obj: object, prop: string, defaultVal: any): void {
+  if (_utils.isNullOrUndefined(obj[prop])) obj[prop] = defaultVal;
+}
+
+export * from 'util';
+
+export const fnew = (F, ...a) => new F(...a);
+export const f = (fn, ...args) => fn.bind(null, ...args);
+export const ft = (fn, _this, ...args) => fn.bind(_this, ...args);
+export const norder = (a, b) => a - b;
+export const ident = (x) => x;
+export const caseInsensOrder = (a, b) =>
+  a.toLowerCase().localeCompare(b.toLowerCase());
+
+
+declare global {
+  interface Array<T> {
+    nsort: () => Array<T>;
+  }
+
+  interface Function {
+    then: <Chained, Ret> (next: (Chained) => Ret) => ((...args) => Ret);
+    nice: (def: any) => any;
   }
 }
 
-module.exports = Object.assign({}, _utils, {
-  range, randomID, copyAttribs, chkPassword, hashPassword, promisifyObj, login,
-  log, deepJSONCopy, until, Reentrant, getAllPropertyNames, student, employee,
-  objDefault,
-  fnew: (F, ...a) => new F(...a),
-  f: (fn, ...args) => fn.bind(null, ...args),
-  ft: (fn, _this, ...args) => fn.bind(_this, ...args),
-  norder: (a, b) => a - b,
-  ident: (x) => x,
-  caseInsensOrder: (a, b) =>
-    a.toLowerCase().localeCompare(b.toLowerCase()),
-});
-
-Array.prototype.nsort = function() { // eslint-disable-line no-extend-native
+Array.prototype.nsort = function(): any[] {
   return Array.prototype.sort.call(this, module.exports.norder);
 };
 
-const AsyncFunction = (async function() {}).constructor;
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const AsyncFunction = (async function(): Promise<void> {}).constructor;
 AsyncFunction.prototype.then = function(next) {
   const _this = this;
   return (...args) => {

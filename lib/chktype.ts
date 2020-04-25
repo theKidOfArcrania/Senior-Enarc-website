@@ -1,22 +1,23 @@
-const assert = require('assert');
-const msg = require('./msg.js');
-const util = require('./util.js');
+import * as fs from 'fs';
+import * as assert from 'assert';
+import * as util from './util';
+import msg from './msg';
+import config from './config';
 
 /**
- * @param {String} typname the type name to expect
- * @return {Function} function that checks that a certain value is of the
- * specified type
+ * Dynamically type checks that a certain value has a specific typename.
+ *
+ * @param typname - the type name to expect
  */
-function typChk(typname) {
-  return (val) => {
+function typChk(typname: string) {
+  return (val: any) => {
     assert.strictEqual(typname, typeof val);
   };
 }
 
 /**
  * Checks the string value is within a certain length.
- * @param {Number} len    the length limit
- * @return {Function} checker function
+ * @param len - the length limit
  */
 function string(len) {
   return (val) => {
@@ -32,23 +33,21 @@ function string(len) {
 function file(val) {
   string(50)(val);
   if (/[^A-Za-z0-9]/.test(val)) {
-    assert.fail('File does not exist', 'nofile');
+    assert.fail('File does not exist');
   }
 
-  assert(fs.existsSync(`${config.UPLOAD_IDS}/${val}`),
-      'File does not exist', 'nofile');
+  assert(fs.existsSync(`${config.UPLOAD_IDS}/${val}`), 'File does not exist');
 }
 
 /**
  * This does some sanity checks on the input request data in a route. Note that
  * the req.body must contain the data to sanity check
  *
- * @param {Function} typeCheck    is a function that takes in some object
- *                                and throws an error if the sanity type check
- *                                fails
+ * @param typeCheck - is a function that takes in some object and throws an
+ *                    error if the sanity type check fails
  * @return {Function} a middleware function that can be passed to express.
  */
-function CheckRoute(typeCheck) {
+export default function CheckRoute(typeCheck: (Object) => void) {
   return (req, res, next) => {
     try {
       typeCheck(req.body);
@@ -64,7 +63,7 @@ function CheckRoute(typeCheck) {
   };
 }
 
-Object.assign(CheckRoute, {
+const fns = {
   string: string,
   file: file,
   bool: typChk('boolean'),
@@ -103,12 +102,14 @@ Object.assign(CheckRoute, {
       chkr(val);
     }
   },
-  maybeDefinedObjExcept: (props, except) => (val) => {
+  maybeDefinedObjExcept: (props, except) => (obj) => {
     typChk('object')(obj);
     for (const p of Object.getOwnPropertyNames(props)) {
       if (except === p) props[p](obj[p]);
-      else CheckRoute.maybeDefined(props[p])(obj[p]);
+      else fns.maybeDefined(props[p])(obj[p]);
     }
   },
-});
+};
+
+Object.assign(CheckRoute, fns);
 module.exports = CheckRoute;

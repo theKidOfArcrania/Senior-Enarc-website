@@ -12,8 +12,8 @@
     "start": "node lib/server.js",
     "build": "echo build",
     "check": "bash ./check.sh",
-    "lint": "eslint --ignore-pattern '*.json' lib/** test/**",
-    "fixlint": "eslint --fix --ignore-pattern '*.json' lib/** test/**",
+    "lint": "eslint lib test --ext .js,.ts",
+    "fixlint": "eslint --fix lib test --ext .js,.ts",
     "pretest": "npm run check",
     "pretest-coverage": "npm run check",
     "pretest-codecov": "npm run check",
@@ -44,18 +44,31 @@
     "mysql": "^2.18.1",
     "nodejs-snowflake": "^1.4.1",
     "nodemailer": "^6.4.5",
-    "session-file-store": "^1.4.0"
+    "session-file-store": "^1.4.0",
+    "typescript-eslint": "0.0.1-alpha.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^3.0.0",
+    "@types/express": "^4.17.6",
+    "@types/express-session": "^1.17.0",
+    "@types/mocha": "^7.0.2",
+    "@types/morgan": "^1.9.0",
+    "@types/mysql": "^2.15.10",
+    "@types/node": "^13.13.2",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
     "cli-table3": "^0.6.0",
     "codecov": "^3.6.5",
     "eslint": "^6.8.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-jsdoc": "^22.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-tsdoc": "^0.2.4",
     "mocha": "^7.1.0",
     "nyc": "^15.0.1",
     "superagent-prefix": "0.0.2",
     "supertest": "^4.0.2",
+    "typescript": "^3.8.3",
     "why-is-node-running": "^2.1.2"
   }
 }

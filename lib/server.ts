@@ -1,9 +1,10 @@
-const express = require('express');
-const morgan = require('morgan');
-const asyncHan = require('express-async-handler');
-const fs = require('fs').promises;
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+import * as express from 'express';
+import * as morgan from 'morgan';
+import asyncHan from 'express-async-handler';
+import {promises as fs} from 'fs';
+import * as session from 'express-session';
+
+const FileStore = require('session-file-store').session;
 
 const config = require('./config.js');
 const util = require('./util.js');
@@ -18,7 +19,7 @@ const {getInst, setInst, Database} = require('./model/db.js');
  */
 async function initServer() {
   const app = express();
-  const apis = new express.Router();
+  const apis = express.Router();
 
   // Use dummy storage data for right now
   setInst(new Database());
@@ -47,7 +48,7 @@ async function initServer() {
     ...config.SESSION_CONFIG,
     store: new FileStore(config.FILE_STORE_CONFIG),
   }));
-  app.use(asyncHan(async (req, res, next) => {
+  app.use(asyncHan(async (req: Express.Request, res: Express.Response, next) => {
     const uid = req.session.uid;
     if (uid !== undefined) {
       const u = new user.User(uid);

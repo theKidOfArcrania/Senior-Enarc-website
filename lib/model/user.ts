@@ -1,3 +1,6 @@
+import type * as typ from './usertypes';
+import {UTDType as utypes} from './usertypes';
+
 
 /**
  * Syntactical function to reload some field's value or to initialize it if it
@@ -6,10 +9,10 @@
  * @param {Object}     obj   the object
  * @param {String}     fld   field name to reload/initialize on obj
  * @param {Function} Otherwise   the constructor for initialization
- * @return {Promise} a promise on successful loading of database
  */
-async function doReloadOr(conn, obj, fld, Otherwise) {
-  val = obj[fld];
+async function doReloadOr(conn, obj: object, fld: string, 
+    Otherwise: () => void) {
+  let val = obj[fld];
   if (!val) {
     val = new Otherwise();
     Object.defineProperty(obj, fld, {
@@ -39,7 +42,7 @@ async function getMyTeams(conn, u) {
       conn.findProjectAssignedTeam.bind(conn)))));
 
   // Search for memberOf role
-  if (u.isUtd && u.utd.uType === UTDPersonnel.types.STUDENT) {
+  if (u.isUtd && u.utd.uType === utypes.STUDENT) {
     const memb = u.utd.student.memberOf;
     if (memb !== null && !tids.includes(memb)) {
       tids.push(memb);
@@ -54,6 +57,8 @@ async function getMyTeams(conn, u) {
  * An abstract user entity
  */
 class Uent {
+  uid: number;
+
   /**
    * Creates a user entity from a uid
    * @param {String} uid   the user ID to associate with this user
@@ -76,7 +81,13 @@ class Uent {
 /**
  * Contains the data model information of a user.
  */
-class User extends Uent {
+class User extends Uent implements typ.User {
+  userID: number;
+  fname: string;
+  lname: string;
+  email: string;
+
+
   /**
    * Creates a user from a uid
    * @param {String} uid   the user ID to associate with this user

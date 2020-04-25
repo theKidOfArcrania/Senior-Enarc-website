@@ -1,20 +1,22 @@
-const Enum = require('./enum.js');
 
 /**
  * This represents all the broader category types that can occur for a given
  * message
  */
-class MessageType extends Enum {}
-const mt = MessageType;
-const nmt = (...args) => new MessageType(...args);
-Enum.reg(nmt('internal'), nmt('login'), nmt('perm'), nmt('ill-arg'),
-    nmt('ill-state'), nmt('success'), nmt('unknown'));
+export enum MessageType {
+  LOGIN = 'login',
+  PERM = 'perm',
+  ILL_ARG = 'ill-arg',
+  ILL_STATE = 'internal',
+  SUCCESS = 'success',
+  UNKNOWN = 'unknown',
+  INTERNAL = 'internal',
+};
 
-exports.MessageType = mt;
-exports.codes = {
+const mt = MessageType;
+export const codes = {
   alreadyjoin: mt.ILL_STATE,
   badformat: mt.ILL_ARG,
-  badproj: mt.ILL_ARG,
   badstatus: mt.PERM,
   badteam: mt.ILL_ARG,
   badteamname: mt.ILL_STATE,
