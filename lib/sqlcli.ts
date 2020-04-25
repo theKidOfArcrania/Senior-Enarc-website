@@ -1,14 +1,14 @@
-const fs = require('fs').promises;
-const os = require('os');
-const readline = require('readline');
-const Table = require('cli-table3');
+import {promises as fs} from 'fs';
+import * as os from 'os';
+import * as readline from 'readline';
+import * as Table from 'cli-table3';
 
-const config = require('./config.js');
+import config from './config.js';
 config.TESTING = true;
 
-const sqldb = require('./model/sqldb.js');
+import SQLDatabase from './model/sqldb.js';
 
-const loader = require('../test/data/loader.js');
+import loader from '../test/data/loader.js';
 
 
 const rl = readline.createInterface({
@@ -17,6 +17,25 @@ const rl = readline.createInterface({
 });
 const readers = [];
 const lines = [];
+
+/**
+ * Loads the readline history from a file. Expands ~ in filename
+ * @param file - the file to load history from.
+ */
+async function loadHistory(file): Promise<void> {
+  file = file.replace('~', os.homedir());
+  (rl as any).history = (await fs.readFile(file, {encoding: 'utf8'}))
+      .trim().split('\n');
+}
+
+/**
+ * Saves the readline history to a file. Expands ~ in filename
+ * @param file - the file to save history to.
+ */
+async function saveHistory(file): Promise<void> {
+  file = file.replace('~', os.homedir());
+  await fs.writeFile(file, (rl as any).history.join('\n'));
+}
 
 rl.on('SIGINT', async () => {
   try {
@@ -30,9 +49,9 @@ rl.on('SIGINT', async () => {
  * Reads a line of text from standard input. This also includes line editing
  * support and typical stuff like that.
  */
-async function getline() {
+async function getline(): Promise<string> {
   rl.prompt();
-  const listen = (line) => {
+  const listen = (line): void => {
     if (readers.length) {
       readers.shift()(line);
     } else {
@@ -45,7 +64,8 @@ async function getline() {
   } else {
     rl.on('line', listen);
     rl.on('close', end);
-    const ret = await new Promise((resolve) => readers.push(resolve));
+    const ret = (await new Promise((resolve) => readers.push(resolve)) as
+        string);
     rl.off('line', listen);
     rl.off('close', end);
     return ret;
@@ -53,30 +73,11 @@ async function getline() {
 }
 
 /**
- * Loads the readline history from a file. Expands ~ in filename
- * @param {String} file    the file to load history from.
- */
-async function loadHistory(file) {
-  file = file.replace('~', os.homedir());
-  rl.history = (await fs.readFile(file, {encoding: 'utf8'}))
-      .trim().split('\n');
-}
-
-/**
- * Saves the readline history to a file. Expands ~ in filename
- * @param {String} file    the file to save history to.
- */
-async function saveHistory(file) {
-  file = file.replace('~', os.homedir());
-  await fs.writeFile(file, rl.history.join('\n'));
-}
-
-/**
  * The main function that will run this small mysql cli interface.
  */
-async function main() {
+async function main(): Promise<void> {
   config.SQLCREDS.multipleStatements = true;
-  const db = new sqldb.SQLDatabase(config.SQLCREDS);
+  const db = new SQLDatabase(config.SQLCREDS);
   try {
     await loadHistory('~/.enarc-mysql');
   } catch (e) {
@@ -87,7 +88,7 @@ async function main() {
   const trans = await db.beginTransaction();
   try {
     await loader.loadIntoDB(trans);
-    while (true) {
+    for (;;) {
       const qstr = await getline();
       if (qstr === undefined) break;
       if (qstr.trim().toUpperCase() === 'COMMIT') {

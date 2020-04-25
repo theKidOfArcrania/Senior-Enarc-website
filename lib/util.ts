@@ -1,12 +1,15 @@
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import * as _utils from 'util';
-import { setTimeout } from 'timers';
+import {setTimeout} from 'timers';
+import type * as express from 'express';
+import type * as core from 'express-serve-static-core';
+
 
 import config from './config';
 
 
-const {promisify} = _utils;
+const {promisify: _promisify} = _utils;
 const uid = new (require('nodejs-snowflake').UniqueID)({returnAsNumber: false});
 
 /**
@@ -18,7 +21,7 @@ export async function until(timeout: number): Promise<void> {
   if (timeout < 0) {
     return new Promise(() => undefined);
   } else {
-    await promisify(setTimeout)(timeout);
+    await _promisify(setTimeout)(timeout);
   }
 }
 
@@ -43,13 +46,13 @@ export class Reentrant {
    * Attempts to take the lock. By default it will not wait at all, but if
    * supplied a positive timeout, it will wait that number of milliseconds to
    * take the lock.
-   * @param timeout - a timeout to wait in milliseconds. If positive, waits for 
-   *                  that time. If 0, it will return immediately. Otherwise, 
+   * @param timeout - a timeout to wait in milliseconds. If positive, waits for
+   *                  that time. If 0, it will return immediately. Otherwise,
    *                  if negative, it will wait indefinitely.
    */
   async tryLock(timeout = 0): Promise<boolean> {
     let timedOut = false;
-    const _this = this; 
+    const _this = this;
 
     if (!this.locked) {
       this.locked = true;
@@ -126,7 +129,7 @@ export function randomID(): string {
 }
 
 /**
- * Copy object attributes 
+ * Copy object attributes
  * @param dst - the destination objecct
  * @param src - the source objecct
  * @param attribs - the attribute/default values to copy
@@ -185,10 +188,10 @@ export function promisifyObj<T>(obj: T): PromisifiedObj<T> {
   const proto = obj.constructor.prototype;
   for (const name of getAllPropertyNames(proto)) {
     if (!(_utils.isFunction(proto[name]))) continue;
-    if (promisify.custom in proto[name]) {
-      Promisified.prototype[name] = proto[name][promisify.custom].bind(obj);
+    if (_promisify.custom in proto[name]) {
+      Promisified.prototype[name] = proto[name][_promisify.custom].bind(obj);
     } else {
-      Promisified.prototype[name] = promisify(proto[name].bind(obj));
+      Promisified.prototype[name] = _promisify(proto[name].bind(obj));
     }
   }
 
@@ -209,7 +212,8 @@ export async function hashPassword(passwd: string): Promise<string> {
  * @param passwd - the password
  * @param hash - the bcrypt hash
  */
-export async function chkPassword(passwd: string, hash: string): Promise<boolean> {
+export async function chkPassword(passwd: string, hash: string):
+    Promise<boolean> {
   return await bcrypt.compare(passwd, hash);
 }
 
@@ -263,7 +267,48 @@ export const norder = (a, b) => a - b;
 export const ident = (x) => x;
 export const caseInsensOrder = (a, b) =>
   a.toLowerCase().localeCompare(b.toLowerCase());
+export const asyncHan = <P extends core.Params = core.ParamsDictionary,
+  ResBody = any, ReqBody = any, ReqQuery = core.Query>(fn:
+    express.RequestHandler<P, ResBody, ReqBody, ReqQuery>) =>
+    function asyncUtilWrap(req: express.Request<P, ResBody, ReqBody, ReqQuery>,
+        res: express.Response<ResBody>,
+        next: core.NextFunction): Promise<void> {
+      const fnReturn = fn(req, res, next);
+      return Promise.resolve(fnReturn).catch(next);
+    };
 
+export type Null = {_unused_nullery: never}|null;
+export type Some<T> = Null | T;
+
+export type Check<Succ, Fail> = [true, Succ] | [false, Fail];
+
+/**
+ * Determines whether if a check monad is successful or not
+ */
+export function isSuccess<S, F>(chk: Check<S, F>): chk is [true, S] {
+  return chk[0];
+} 
+
+/** Returns a success monad */
+export function Success<S>(succ: S): [true, S] {return [true, succ];}
+/** Returns a fail monad */
+export function Fail<F>(fail: F): [false, F] {return [false, fail];}
+
+/**
+ * This is a special typeguard to test whether if something is null or not. This
+ * does not use the null type, but instead chains a dummy type that pretends to
+ * be null (adds an imaginary field to force typescript to give a big fat error
+ * if null.
+ *
+ * @param val - the value to test
+ */
+export function isNull<T>(val: Some<T>): val is Null {
+  if (val === null) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 declare global {
   interface Array<T> {
@@ -272,7 +317,7 @@ declare global {
 
   interface Function {
     then: <Chained, Ret> (next: (Chained) => Ret) => ((...args) => Ret);
-    nice: (def: any) => any;
+    // nice: (def: any) => any;
   }
 }
 
@@ -295,20 +340,20 @@ AsyncFunction.prototype.nice = function(defVal = null) {
   };
 };
 
-Function.prototype.then = function(next) { // eslint-disable-line
+Function.prototype.then = function(next) {
   const _this = this;
   return (...args) => {
     return next(_this(...args));
   };
 };
 
-Function.prototype.nice = function(defVal = null) { // eslint-disable-line
-  const _this = this;
-  return (...args) => {
-    try {
-      return _this(...args);
-    } catch (e) {
-      return defVal;
-    }
-  };
-};
+// Function.prototype.nice = function(defVal = null) {
+//   const _this = this;
+//   return (...args) => {
+//     try {
+//       return _this(...args);
+//     } catch (e) {
+//       return defVal;
+//     }
+//   };
+// };

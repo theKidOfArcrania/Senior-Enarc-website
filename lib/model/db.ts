@@ -1,4 +1,4 @@
-import {copyAttribs, range, Reentrant, deepJSONCopy} from '../util.js';
+import {copyAttribs, range, Reentrant, deepJSONCopy, Some} from '../util.js';
 
 import * as typ from './dbtypes';
 
@@ -49,48 +49,6 @@ for (const [tblPri, fkeys] of Object.entries(foreignKeys)) {
     foreignKeysR[tblFgn].push([fkey, tblPri, dmode]);
   }
 }
-
-export type ProjectStatusInfo = {visible: boolean; modifiable: boolean};
-
-
-/**
- * This represents an enumeration of all the different statuses that a project
- * can be in.
- */
-export enum ProjectStatus {
-  SUBMITTED = 'submitted',
-  NEEDS_REVISION = 'needs-revision',
-  ACCEPTED = 'accepted',
-  REJECTED = 'rejected',
-  ARCHIVED = 'archived',
-}
-
-const info = (visible: boolean, modifiable: boolean): ProjectStatusInfo => {
-  return {visible, modifiable};
-};
-
-export const projStatuses: {[P in ProjectStatus]: ProjectStatusInfo} = {
-  [ProjectStatus.SUBMITTED]: info(false, true),
-  [ProjectStatus.NEEDS_REVISION]: info(false, true),
-  [ProjectStatus.ACCEPTED]: info(true, false),
-  [ProjectStatus.REJECTED]: info(false, false),
-  [ProjectStatus.ARCHIVED]: info(false, false),
-};
-
-Object.freeze(projStatuses);
-
-/**
- * This represents an enumeration of all the different statuses of a help ticket
- */
-export enum HelpTicketStatus {
-  OPEN = 'open',
-  CLOSED = 'closed',
-  RESOLVED = 'resolved'
-}
-
-export const ticketStatuses = new Set<HelpTicketStatus|string>(
-    [HelpTicketStatus.OPEN, HelpTicketStatus.CLOSED,
-      HelpTicketStatus.RESOLVED]);
 
 
 type DBTable = {[P: string]: any};
@@ -314,7 +272,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * Finds the team assigned to the project, if it exists.
    * @param pid - the project ID
    */
-  async findProjectAssignedTeam(pid): Promise<number|null> {
+  async findProjectAssignedTeam(pid): Promise<Some<number>> {
     await this.checkValid();
     for (const tid of Object.keys(this._db.TEAM)) {
       if (this._db.TEAM[tid].assignedProj === pid) {
@@ -328,7 +286,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * Search a user by an email, returns the respective user ID.
    * @param email - the email to search on
    */
-  async searchUserByEmail(email): Promise<number|null> {
+  async searchUserByEmail(email): Promise<Some<number>> {
     await this.checkValid();
     for (const uid of Object.keys(this._db.USER)) {
       const nuid = parseInt(uid);
@@ -343,7 +301,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * Searches a team by its common name, returning the respective team ID.
    * @param name - the name of the team.
    */
-  async searchTeamByName(name): Promise<number|null> {
+  async searchTeamByName(name): Promise<Some<number>> {
     await this.checkValid();
     for (const tid of Object.keys(this._db.TEAM)) {
       const ntid = parseInt(tid);
@@ -501,12 +459,12 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * @param tblname - table name
    * @param errmsg - error message to throw if entry not found
    */
-  async _loadEntity(id, tblname, errmsg): Promise<typ.Entity> {
+  async _loadEntity(id, tblname): Promise<Some<typ.Entity>> {
     const tbl = this._db[tblname];
     if (id in tbl) {
       return Object.assign({}, tbl[id]);
     } else {
-      throw new typ.DBError(errmsg);
+      return null;
     }
   }
 
@@ -543,7 +501,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
 /**
  * This represents a memory-based database
  */
-export class MemDatabase extends typ.Database<MemDB> {
+export default class MemDatabase extends typ.Database<MemDB> {
   _lock: Reentrant;
   _db: MemDB;
 

@@ -1,6 +1,5 @@
-import {User, UTDPersonnel} from '../model/user';
+import {User, UTDType as utypes} from '../model/user';
 import msg from '../msg';
-const {types: utypes} = UTDPersonnel;
 
 /**
  * Middleware function that will check that a user is logged in or not
@@ -8,7 +7,7 @@ const {types: utypes} = UTDPersonnel;
  * @param res - the response object
  * @param next - calls next middleware in the chain.
  */
-export function login(req, res, next) {
+export function login(req, res, next): void {
   if (req.user) {
     next();
   } else {
@@ -22,8 +21,8 @@ export function login(req, res, next) {
  * @param res - the response object
  * @param next - calls next middleware in the chain.
  */
-export function student(req, res, next) {
-  let u: User = req.user;
+export function student(req, res, next): void {
+  const u: User = req.user;
   if (u && u.isUtd && u.utd.uType === utypes.STUDENT) {
     req.student = u.utd.student;
     next();
@@ -38,8 +37,8 @@ export function student(req, res, next) {
  * @param res - the response object
  * @param next - calls next middleware in the chain.
  */
-export function employee(req, res, next) {
-  let u: User = req.user;
+export function employee(req, res, next): void {
+  const u: User = req.user;
   if (u && u.isEmployee) {
     req.employee = u.employee;
     next();

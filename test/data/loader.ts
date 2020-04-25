@@ -1,6 +1,6 @@
-const assert = require('assert');
-const fs = require('fs');
-const util = require('../../lib/util.js');
+import * as assert from 'assert';
+import * as fs from 'fs';
+import * as util from '../../lib/util.js';
 
 const tables = [
   ['COMPANY', 'Company', 'name'],

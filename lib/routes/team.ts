@@ -1,75 +1,110 @@
-const express = require('express');
-const asyncHan = require('express-async-handler');
+import * as express from 'express';
+import {asyncHan} from '../util';
 
-const {getInst} = require('../model/db.js');
-const {User, UTDPersonnel} = require('../model/user.js');
-const utypes = UTDPersonnel.types;
-const util = require('../util.js');
-const msg = require('../msg.js');
+import {getInst} from '../model/db';
+import msg from '../msg';
+import * as auth from './auth';
+import {Some, isNull} from '../util';
+import * as util from '../util';
+import * as ent from '../model/enttypes';
+import {User} from '../model/usertypes';
+import {User as CUser} from '../model/user';
+import type {DatabaseTransaction as DBTrans} from '../model/dbtypes';
 
-const r = new express.Router();
+import {UTDType as utypes} from '../model/enttypes';
+
+const r = express.Router();
+
+enum Access {
+  NONE, RESTRICTED, FULL
+}
 
 /**
- * Obtains a restriction level for a particular team and user.
- * @param {Object} u   the user.
- * @param {Object} t   the team
- * @return {Boolean/Null} true if the user can get full access, false if the
- *   user can get restricted access (view public team info), null if user cannot
- *   get any access.
+ * Obtains a restriction level for a particular team and user. This returns a
+ * tri-state determining the access level.
+ *
+ * @param u - the user.
+ * @param t - the team
  */
-async function teamRestrictionLevel(u, t) {
-  let access = false; // Default access level
+function teamRestrictionLevel(u: User, t: ent.Team): Access {
+  let access = Access.RESTRICTED; // Default access level
 
   // Teams with a password protection will be restricted
-  if (t.password) access = null;
+  if (t.password) access = Access.NONE;
 
   if (u.isUtd) {
     const utd = u.utd;
     switch (utd.uType) {
       case utypes.STUDENT:
         // Once a student selects a team, they don't see any other teams
-        if (utd.student.memberOf !== null) access = null;
+        if (utd.student.memberOf !== null) access = Access.NONE;
         break;
       case utypes.STAFF:
         // Staff by default have full read access
-        access = true;
+        access = Access.FULL;
         break;
       default: // Faculty get no access by default
-        access = null;
+        access = Access.NONE;
     }
 
     // Admins gets full access
-    if (utd.isAdmin) access = true;
+    if (utd.isAdmin) access = Access.FULL;
   } else {
     // Non UTD people by default get no access to any teams.
-    access = null;
+    access = Access.NONE;
   }
 
   // Teams that the user is in get full access
-  if (u.teams.includes(t.tid)) access = true;
+  if (u.teams.includes(t.tid)) access = Access.FULL;
 
   return access;
 }
 
 /**
- * Loads the team, loading all aggregate data that is allowed for this user.
- * @param {Transaction} tr     the transaction object
- * @param {Object}  u          the user requesting this team data.
- * @param {Boolean} onlyTeam   whether to only load the team entity.
- * @param {Object}  tid        the team ID to load.
- * @return {Object} the processed data, or null if the user has insufficient
- *     permissions to view anything
+ * Wraps the common code for loading a team from a memberOf relation into a
+ * Check monad. If succesful, returns the team and members of that team,
+ * otherwise returns a message detailing the failure.
+ *
+ * @param tr - the DB transaction
+ * @param tid - the team ID used to load team (this is usually the memberOf
+ *              property of student). If this is null, it will fail.
+ * @param reqLeader - whether if this uid specified should be the leader. If
+ *                    null is given here, no check will be made
  */
-async function loadTeam(tr, u, onlyTeam, tid) {
-  let members;
-  let t;
-
-  try {
-    t = await tr.loadTeamInfo(tid);
-  } catch (e) {
-    if (e.dberror) return null;
-    else throw e;
+async function checkLoadTeam<T>(tr: DBTrans<T>, tid: Some<number>,
+    reqLeader: Some<number>): Promise<util.Check<[ent.Team, number[]], msg>> {
+  if (isNull(tid)) {
+    return util.Fail(msg.fail('You are not in a team!', 'notinteam'));
   }
+
+  const team = await tr.loadTeamInfo(tid);
+  if (isNull(team)) {
+    return util.Fail(msg.fail('Error loading team info', 'internal'));
+  }
+
+  if (!util.isNull(reqLeader) && team.leader !== reqLeader) {
+    return util.Fail(msg.fail('You must be the team leader', 'notteamleader'));
+  }
+
+  const members = await tr.findMembersOfTeam(tid);
+  return util.Success([team, members]);
+}
+
+/**
+ * Loads the team, loading all aggregate data that is allowed for this user.
+ * @param tr - the transaction object
+ * @param u - the user requesting this team data.
+ * @param onlyTeam - whether to only load the team entity.
+ * @param tid - the team ID to load.
+ */
+async function loadTeam<DB>(tr: DBTrans<DB>, u: User, onlyTeam: boolean,
+    tid: Some<number>): Promise<Some<ent.Team>> {
+  let members;
+
+  if (isNull(tid)) return null;
+
+  const t = await tr.loadTeamInfo(tid);
+  if (isNull(t)) return null;
 
   const access = await teamRestrictionLevel(u, t);
   if (access === null) return null;
@@ -78,7 +113,7 @@ async function loadTeam(tr, u, onlyTeam, tid) {
     members = [];
   } else {
     const memUids = await tr.findMembersOfTeam(t.tid);
-    members = memUids.map((uid) => new User(uid));
+    members = memUids.map((uid) => new CUser(uid));
     await Promise.all(members.map((u) => u.reload(tr)));
   }
 
@@ -96,13 +131,13 @@ async function loadTeam(tr, u, onlyTeam, tid) {
     // Public access
     tret = util.copyAttribs({}, t, {'tid': null, 'leader': null,
       'comments': null, 'name': null, 'membLimit': null});
-    tret.members = members.map((m) => utils.copyAttribs({}, m, {
+    tret.members = members.map((m) => util.copyAttribs({}, m, {
       'uid': null, 'fname': null, 'lname': null, 'email': null}));
   }
   return tret;
 }
 
-r.get('/team', util.login, asyncHan(async (req, res) => {
+r.get('/team', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
 
   await getInst().doRTransaction(async (tr) => {
@@ -128,24 +163,22 @@ r.get('/team', util.login, asyncHan(async (req, res) => {
 }));
 
 // Obtain a list of teams that the user wants information for
-r.post('/team', util.login, asyncHan(async (req, res) => {
+r.post('/team', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
   const tids = Array.prototype.slice.call(req.bodySan);
   const teams = {};
 
   await getInst().doRTransaction(async (tr) => {
-    for (const t of await Promise.all(tids.map(
-        loadTeam.bind(null, tr, u, false)))) {
-      if (t !== null) {
-        teams[t.tid] = t;
-      }
+    for (const tid of tids) {
+      const t = await loadTeam(tr, u, false, tid);
+      if (!isNull(t)) teams[t.tid] = t;
     }
   });
 
   res.json(msg.success('Success', teams));
 }));
 
-r.post('/team/join', util.login, util.student, asyncHan(async (req, res) => {
+r.post('/team/join', auth.login, auth.student, asyncHan(async (req, res) => {
   const s = req.student;
   if (s.memberOf !== null) {
     res.json(msg.fail('You are already part of a team. Leave this team ' +
@@ -193,7 +226,7 @@ r.post('/team/join', util.login, util.student, asyncHan(async (req, res) => {
   res.json(m);
 }));
 
-r.put('/team', util.student, asyncHan(async (req, res) => {
+r.put('/team', auth.student, asyncHan(async (req, res) => {
   const alters = req.bodySan;
   const s = req.student;
   const {choices, leader: setLeader, password: setPassword,
@@ -201,17 +234,16 @@ r.put('/team', util.student, asyncHan(async (req, res) => {
 
   let m = msg.fail('An unknown error occurred!', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
-    const tid = s.memberOf;
-    const team = await tr.loadTeamInfo(tid);
-    const members = await tr.findMembersOfTeam(tid);
-    if (team.leader !== s.uid) {
-      m = msg.fail('You must be the team leader', 'notteamleader');
+    const loading = await checkLoadTeam(tr, s.memberOf, s.uid);
+    if (!util.isSuccess(loading)) {
+      m = loading[1];
       return false;
     }
 
+    const [team, members] = loading[1];
     if (setName !== undefined) {
       const hasName = await tr.searchTeamByName(setName);
-      if (hasName !== tid && hasName !== null) {
+      if (hasName !== team.tid && !util.isNull(hasName)) {
         m = msg.fail('Team name already exist', 'badteamname');
         return false;
       }
@@ -241,7 +273,7 @@ r.put('/team', util.student, asyncHan(async (req, res) => {
       alters.password = await util.hashPassword(setPassword);
     }
 
-    return await tr.alterTeamInfo(tid, alters);
+    return await tr.alterTeamInfo(team.tid, alters);
   });
 
   if (success) {
@@ -251,20 +283,19 @@ r.put('/team', util.student, asyncHan(async (req, res) => {
 }));
 
 // Remove a member from a team
-r.delete('/team/member', util.student, asyncHan(async (req, res) => {
+r.delete('/team/member', auth.student, asyncHan(async (req, res) => {
   let m = msg.fail('An unknown error occurred!', 'internal');
   const s = req.student;
   const uids = Array.prototype.slice.call(req.bodySan);
   const success = await getInst().doTransaction(async (tr) => {
-    const tid = s.memberOf;
-    const team = await tr.loadTeamInfo(tid);
-    const members = await tr.findMembersOfTeam(tid);
-
-    if (team.leader !== s.uid) {
-      m = msg.fail('You must be the team leader', 'notteamleader');
+    const loading = await checkLoadTeam(tr, s.memberOf, s.uid);
+    if (!util.isSuccess(loading)) {
+      m = loading[1];
       return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [team, members] = loading[1];
     if (uids.includes(s.uid)) {
       m = msg.fail('You cannot remove yourself', 'teamremoveself');
       return false;
@@ -287,19 +318,23 @@ r.delete('/team/member', util.student, asyncHan(async (req, res) => {
 }));
 
 // Leave the team
-r.post('/team/leave', util.student, asyncHan(async (req, res) => {
+r.post('/team/leave', auth.student, asyncHan(async (req, res) => {
   const s = req.student;
   let m = msg.fail('An unknown error occurred!', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
-    const tid = s.memberOf;
-    const team = await tr.loadTeamInfo(tid);
-    const members = await tr.findMembersOfTeam(tid);
+    const loading = await checkLoadTeam(tr, s.memberOf, s.uid);
+    if (!util.isSuccess(loading)) {
+      m = loading[1];
+      return false;
+    }
+
+    const [team, members] = loading[1];
     if (team.leader === s.uid) {
       if (members.length > 1) {
         m= msg.fail('Make someone else the leader of this team.', 'teamleader');
         return false;
       } else {
-        if (!(await (tr.alterTeamInfo(tid, {leader: null})))) return false;
+        if (!(await (tr.alterTeamInfo(team.tid, {leader: null})))) return false;
       }
     }
 
@@ -311,19 +346,20 @@ r.post('/team/leave', util.student, asyncHan(async (req, res) => {
 }));
 
 // Obtain all the teams that this person is associated with
-r.get('/team/mylist', util.login, asyncHan(async (req, res) => {
+r.get('/team/mylist', auth.login, asyncHan(async (req, res) => {
   const tids = req.user.teams;
   res.json(msg.success('Success', tids));
 }));
 
 // Obtain the team IDs of all publically visible teams
-r.get('/team/list', util.login, asyncHan(async (req, res) => {
+r.get('/team/list', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
   await getInst().doRTransaction(async (tr) => {
-    const teams = (await Promise.all((await tr.findAllTeams())
-        .map(loadTeam.bind(null, tr, u, true))))
-        .filter((t) => t !== null)
-        .map((t) => t.tid);
+    const teams: number[] = [];
+    for (const tid of await tr.findAllTeams()) {
+      if (isNull(loadTeam(tr, u, true, tid))) continue;
+      teams.push(tid);
+    }
     res.json(msg.success('Success', teams));
   }, 500);
 }));

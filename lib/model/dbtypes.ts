@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
-import {promisify} from '../util';
+import {promisify, Some, isNull} from '../util';
+import type * as ent from './enttypes';
 
 export type Tables = 'USER' | 'PROJECT' | 'UTD_PERSONNEL' | 'FACULTY' |
   'STUDENT' | 'EMPLOYEE' | 'COMPANY' | 'FACULTY_OR_TEAM' | 'TEAM' | 'CHOICE' |
@@ -460,18 +461,18 @@ export abstract class DatabaseTransaction<DB> {
    * Finds the team assigned to the project, if it exists.
    * @param pid - the project ID
    */
-  abstract async findProjectAssignedTeam(pid: number): Promise<number|null>;
+  abstract async findProjectAssignedTeam(pid: number): Promise<Some<number>>;
 
   /**
    * Search a user by an email, returns the respective user ID.
    * @param email - the email to search on
    */
-  abstract async searchUserByEmail(email: string): Promise<number|null>;
+  abstract async searchUserByEmail(email: string): Promise<Some<number>>;
   /**
    * Searches a team by its common name, returning the respective team ID.
    * @param name - the name of the team.
    */
-  abstract async searchTeamByName(name): Promise<number|null>;
+  abstract async searchTeamByName(name): Promise<Some<number>>;
 
   /**
    * Attempts to generate a unique ID for a specific table by checking if the ID
@@ -545,7 +546,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param tableName - the table entity name
    * @param id - the id
    */
-  abstract async _deleteEntity(tableName: Tables, id: number|string|null):
+  abstract async _deleteEntity(tableName: Tables, id: Some<number|string>):
       Promise<boolean>;
 
   /**
@@ -810,19 +811,18 @@ export abstract class DatabaseTransaction<DB> {
    *
    * @param id - unique identifier for the entity
    * @param tblname - table name
-   * @param errmsg - error message to throw if entry not found
    */
-  abstract async _loadEntity(id: number|string, tblname: Tables,
-    errmsg: string): Promise<Entity>;
+  abstract async _loadEntity(id: number|string, tblname: Tables):
+    Promise<Some<Entity>>;
 
   /**
    * Loads the team info associated with the tid.
    * @param tid - the team id to search for.
    */
-  async loadTeamInfo(tid: number): Promise<Entity> {
+  async loadTeamInfo(tid: number): Promise<Some<ent.Team>> {
     await this.checkValid();
-    const ret = await this._loadEntity(tid, 'TEAM',
-        'loadTeamInfo: No team with given tid');
+    const ret = await this._loadEntity(tid, 'TEAM') as Some<ent.Team>;
+    if (isNull(ret)) return null;
     ret.choices = await this.findTeamChoices(tid);
     return ret;
   }
@@ -831,10 +831,10 @@ export abstract class DatabaseTransaction<DB> {
    * Loads the user info associated with the uid.
    * @param uid - the user id to search for.
    */
-  async loadUserInfo(uid: number): Promise<Entity> {
+  async loadUserInfo(uid: number): Promise<Some<ent.Users>> {
     await this.checkValid();
-    const res = await this._loadEntity(uid, 'USER',
-        'loadUserInfo: No user with given uid');
+    const res = await this._loadEntity(uid, 'USER') as Some<ent.Users>;
+    if (isNull(res)) return null;
     res.isUtd = !!res.isUtd;
     res.isEmployee = !!res.isEmployee;
     return res;
@@ -844,10 +844,10 @@ export abstract class DatabaseTransaction<DB> {
    * Loads the project info associated with the pid.
    * @param pid - the project id to search for.
    */
-  async loadProjectInfo(pid: number): Promise<Entity> {
+  async loadProjectInfo(pid: number): Promise<Some<ent.Project>> {
     await this.checkValid();
-    const val = await this._loadEntity(pid, 'PROJECT',
-        'loadProjectInfo: No project match with given pid');
+    const val = await this._loadEntity(pid, 'PROJECT') as Some<ent.Project>;
+    if (isNull(val)) return null;
     if (!val.skillsReq) val.skillsReq = [];
     val.visible = !!val.visible;
     return val;
@@ -856,21 +856,20 @@ export abstract class DatabaseTransaction<DB> {
    * Loads the employee info associated with the uid.
    * @param uid - the user id to search for.
    */
-  async loadEmployeeInfo(uid: number): Promise<Entity> {
+  async loadEmployeeInfo(uid: number): Promise<Some<ent.Employee>> {
     await this.checkValid();
-    const res = await this._loadEntity(uid, 'EMPLOYEE',
-        'loadEmployeeInfo: No employee with given euid');
-    return res;
+    return this._loadEntity(uid, 'EMPLOYEE') as Promise<Some<ent.Employee>>;
   }
 
   /**
    * Loads the utd personnel info associated with the uid.
    * @param uid - the user id to search for.
    */
-  async loadUTDInfo(uid: number): Promise<Entity> {
+  async loadUTDInfo(uid: number): Promise<Some<ent.UTDPersonnel>> {
     await this.checkValid();
-    const res = await this._loadEntity(uid, 'UTD_PERSONNEL',
-        'loadUTDInfo: No UTD personnel with given uid');
+    const res = await this._loadEntity(uid, 'UTD_PERSONNEL') as
+        Some<ent.UTDPersonnel>;
+    if (isNull(res)) return null;
     res.isAdmin = !!res.isAdmin;
     return res;
   }
@@ -879,33 +878,29 @@ export abstract class DatabaseTransaction<DB> {
    * Loads the student info associated with the uid.
    * @param uid - the user id to search for.
    */
-  async loadStudentInfo(uid: number): Promise<Entity> {
+  async loadStudentInfo(uid: number): Promise<Some<ent.Student>> {
     await this.checkValid();
-    const res = await this._loadEntity(uid, 'STUDENT',
-        'loadStudentInfo: No student with given suid');
-    return res;
+    return this._loadEntity(uid, 'STUDENT') as Promise<Some<ent.Student>>;
   }
+
   /**
    * Loads the company info associated with the name.
    * @param name - the name to search for.
    */
-  async loadCompanyInfo(name: string): Promise<Entity> {
+  async loadCompanyInfo(name: string): Promise<Some<ent.Company>> {
     await this.checkValid();
-    return this._loadEntity(name, 'COMPANY',
-        'loadCompanyInfo: No company with given name');
+    return this._loadEntity(name, 'COMPANY') as Promise<Some<ent.Company>>;
   }
 
   /**
    * Loads the invitation info associated with the ID.
    * @param inviteID - the ID to search for.
    */
-  async loadInviteInfo(inviteID: number): Promise<Entity> {
+  async loadInviteInfo(inviteID: number): Promise<Some<ent.Invite>> {
     await this.checkValid();
-    const msg = 'loadInviteInfo: No invitation with given ID';
-    const ret = await this._loadEntity(inviteID, 'INVITE', msg);
-    if (ret.expiration.valueOf() < Date.now()) {
-      throw new DBError(msg);
-    }
+    const ret = await this._loadEntity(inviteID, 'INVITE') as Some<ent.Invite>;
+    if (isNull(ret)) return null;
+    if (ret.expiration.valueOf() < Date.now()) return null;
     return ret;
   }
 
@@ -913,19 +908,19 @@ export abstract class DatabaseTransaction<DB> {
    * Loads the help ticket info associated with the hid.
    * @param hid - the help ticket id to search for.
    */
-  async loadHelpTicketInfo(hid: number): Promise<Entity> {
+  async loadHelpTicketInfo(hid: number): Promise<Some<ent.HelpTicket>> {
     await this.checkValid();
-    return this._loadEntity(hid, 'HELP_TICKET',
-        'loadHelpTicketInfo: No help ticket with given hid');
+    return this._loadEntity(hid, 'HELP_TICKET') as
+        Promise<Some<ent.HelpTicket>>;
   }
   /**
    * Loads the faculty info associated with the uid.
    * @param uid - the user id to search for.
    */
-  async loadFacultyInfo(uid: number): Promise<Entity> {
+  async loadFacultyInfo(uid: number): Promise<Some<ent.Faculty>> {
     await this.checkValid();
-    const res = await this._loadEntity(uid, 'FACULTY',
-        'loadFacultyInfo: No faculty with given fuid');
+    const res = await this._loadEntity(uid, 'FACULTY') as Some<ent.Faculty>;
+    if (isNull(res)) return null;
     res.choices = await this.findTeamChoices(res.tid);
     return res;
   }

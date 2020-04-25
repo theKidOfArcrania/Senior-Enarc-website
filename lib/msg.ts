@@ -16,19 +16,18 @@ export default class Message {
    * @param msg - the string message
    * @param body - the payload body
    */
-  static success(msg: string, body: object = null) {
+  static success(msg: string, body: object = null): Message {
     return new Message(msg, true, MessageType.SUCCESS, body);
   }
 
   /**
    * Convenience constructor for a fail message
    * @param msg - the string message
-   * @param debug - a debug reason for the failure (only available in testing 
+   * @param debug - a debug reason for the failure (only available in testing
    *                mode). This must be a valid message code.
    */
-  static fail(msg: string, debug:string) {
+  static fail(msg: string, debug: keyof typeof codes): Message {
     const catg = codes[debug];
-    if (!catg) debug = 'unknown-' + debug;
     if (config.TESTING) {
       return new Message(msg, false, catg, {debug});
     } else {

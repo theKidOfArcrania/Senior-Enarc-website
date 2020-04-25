@@ -1,6 +1,7 @@
 import * as typ from './dbtypes';
 import * as mysql from 'mysql';
 import * as util from '../util';
+import {Some, isNull} from '../util';
 
 const ENTITY_LIST = ['HelpTicket', 'SkillsReq', 'Choice', 'Project',
   'Team', 'UTDPersonnel', 'Student', 'Faculty', 'FacultyOrTeam',
@@ -23,7 +24,7 @@ const tblspecs = {
 
 export interface QueryRes {
   result: any;
-  fields: mysql.FieldInfo[];
+  field: mysql.FieldInfo[];
 }
 
 interface PConnection {
@@ -58,7 +59,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
     conn.constructor.prototype.query[util.promisify.custom] = (query, ...args):
     Promise<{result: any; field: any}> => {
       // console.log(this.con.format(...args));
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve: (a1: QueryRes) => void, reject) => {
         args.push((error, res, flds) => {
           if (error) reject(error);
           else resolve({result: res, field: flds});
@@ -270,7 +271,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * Finds the team assigned to the project, if it exists.
    * @param pid - the project ID
    */
-  async findProjectAssignedTeam(pid): Promise<number|null> {
+  async findProjectAssignedTeam(pid): Promise<Some<number>> {
     await this.checkValid();
     const qstr = 'SELECT tid FROM Team WHERE assignedProj = ?';
     const res = (await this._query(qstr, [pid])).result;
@@ -282,7 +283,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * Search a user by an email, returns the respective user ID.
    * @param email - the email to search on
    */
-  async searchUserByEmail(email): Promise<number|null> {
+  async searchUserByEmail(email): Promise<Some<number>> {
     await this.checkValid();
     const qstr = 'SELECT userID FROM Users WHERE email = ?';
     const res = (await this._query(qstr, [email])).result;
@@ -298,7 +299,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * failed, returns null;
    * @param name - the name of the team.
    */
-  async searchTeamByName(name): Promise<number|null> {
+  async searchTeamByName(name): Promise<Some<number>> {
     await this.checkValid();
     const qstr = 'SELECT tid FROM Team WHERE name = ?';
     const res = (await this._query(qstr, [name])).result;
@@ -366,7 +367,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    */
   async _deleteEntity(tableName, id): Promise<boolean> {
     const [name, pkey] = tblspecs[tableName];
-    const qstr = `DELETE FROM ?? ${id === null ? '' : 'WHERE ?? = ?'}`;
+    const qstr = `DELETE FROM ?? ${isNull(id) ? '' : 'WHERE ?? = ?'}`;
     return !!((await this._query(qstr, [name, pkey, id])).result.affectedRows);
   }
 
@@ -396,13 +397,12 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * Generic load entity from table name, overriden.
    * @param  id - of the entity
    * @param  tblname - table name
-   * @param  errmsg - error message to throw if entry not found
    */
-  async _loadEntity(id, tblname, errmsg): Promise<typ.Entity> {
+  async _loadEntity(id, tblname): Promise<Some<typ.Entity>> {
     const select = 'SELECT * FROM ?? WHERE ?? = ?';
     const [tbl, pkey] = tblspecs[tblname];
     const res = (await this._query(select, [tbl, pkey, id])).result;
-    if (res.length === 0) throw new typ.DBError(errmsg);
+    if (res.length === 0) return null;
     return Object.assign({}, res[0]);
   }
 

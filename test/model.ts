@@ -355,7 +355,7 @@ function verifyModel(db) {
       });
     }
   });
-};
+}
 
 describe('model', async function() {
   const basic = new Database();

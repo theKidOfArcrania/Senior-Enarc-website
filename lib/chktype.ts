@@ -4,13 +4,15 @@ import * as util from './util';
 import msg from './msg';
 import config from './config';
 
+export type FnChk = (a: any) => void;
+
 /**
  * Dynamically type checks that a certain value has a specific typename.
  *
  * @param typname - the type name to expect
  */
 function typChk(typname: string) {
-  return (val: any) => {
+  return (val: any): void => {
     assert.strictEqual(typname, typeof val);
   };
 }
@@ -19,8 +21,8 @@ function typChk(typname: string) {
  * Checks the string value is within a certain length.
  * @param len - the length limit
  */
-function string(len) {
-  return (val) => {
+function string(len: number) {
+  return (val): void => {
     typChk('string')(val);
     if (len) assert(val.length <= len, `String is too long (max ${val})`);
   };
@@ -28,9 +30,9 @@ function string(len) {
 
 /**
  * Checks that the value given is a valid file link.
- * @param {Object} val     the value
+ * @param val - the value
  */
-function file(val) {
+function file(val: any): void {
   string(50)(val);
   if (/[^A-Za-z0-9]/.test(val)) {
     assert.fail('File does not exist');
@@ -45,10 +47,9 @@ function file(val) {
  *
  * @param typeCheck - is a function that takes in some object and throws an
  *                    error if the sanity type check fails
- * @return {Function} a middleware function that can be passed to express.
  */
-export default function CheckRoute(typeCheck: (Object) => void) {
-  return (req, res, next) => {
+function CheckRoute(typeCheck: FnChk) {
+  return (req, res, next): void => {
     try {
       typeCheck(req.body);
       req.bodySan = req.body;
@@ -68,17 +69,17 @@ const fns = {
   file: file,
   bool: typChk('boolean'),
   number: typChk('number'),
-  int: (val) => {
+  int: (val): void => {
     assert.strictEqual(Math.floor(val), val);
   },
-  enumT: (enumTyp) => (val) =>{
-    if (util.isNullOrUndefined(enumTyp.ofString(val))) {
-      throw new Error('Must be ' + JSON.stringify(enumTyp._values));
+  enumT: <T>(enumTyp: Set<T>) => (val: any): void =>{
+    if (!enumTyp.has(val)) {
+      throw new Error(`Must be ${JSON.stringify([...enumTyp.values()])}`);
     }
   },
-  obj: (props) => (obj) => {
+  obj: (props: {[P: string]: FnChk}) => (obj: any): void => {
     typChk('object')(obj);
-    for (const p of Object.getOwnPropertyNames(props)) {
+    for (const p of Object.keys(props)) {
       // assert this is correct
       props[p](obj[p]);
     }
@@ -86,30 +87,30 @@ const fns = {
       if (!props[p]) throw new Error('Contains bad properties');
     }
   },
-  array: (innerTyp) => (val) => {
+  array: (innerTyp: FnChk) => (val: any): void => {
     typChk('object')(val);
     for (const v of val) {
       innerTyp(v);
     }
   },
-  maybeNull: (chkr) => (val) => {
+  maybeNull: (chkr: FnChk) => (val: any): void => {
     if (val !== null) {
       chkr(val);
     }
   },
-  maybeDefined: (chkr) => (val) => {
+  maybeDefined: (chkr: FnChk) => (val): void => {
     if (val !== undefined) {
       chkr(val);
     }
   },
-  maybeDefinedObjExcept: (props, except) => (obj) => {
-    typChk('object')(obj);
-    for (const p of Object.getOwnPropertyNames(props)) {
-      if (except === p) props[p](obj[p]);
-      else fns.maybeDefined(props[p])(obj[p]);
-    }
-  },
+  maybeDefinedObjExcept: (props: {[P: string]: FnChk}, except: string) =>
+    (obj: any): void => {
+      typChk('object')(obj);
+      for (const p of Object.keys(props)) {
+        if (except === p) props[p](obj[p]);
+        else fns.maybeDefined(props[p])(obj[p]);
+      }
+    },
 };
 
-Object.assign(CheckRoute, fns);
-module.exports = CheckRoute;
+export default Object.assign(CheckRoute, fns);

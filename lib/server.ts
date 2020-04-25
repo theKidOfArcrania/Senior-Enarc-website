@@ -1,28 +1,28 @@
 import * as express from 'express';
 import * as morgan from 'morgan';
-import asyncHan from 'express-async-handler';
+import {asyncHan} from './util';
 import {promises as fs} from 'fs';
 import * as session from 'express-session';
+import type * as http from 'http';
 
 const FileStore = require('session-file-store').session;
 
-const config = require('./config.js');
-const util = require('./util.js');
+import msg from './msg';
+import config from './config';
+import * as util from './util';
+import * as user from './model/user';
 
-const msg = require('./msg.js');
-const user = require('./model/user.js');
-
-const {getInst, setInst, Database} = require('./model/db.js');
+import MemDatabase, {getInst, setInst} from './model/db.js';
 
 /**
  * Initializes the server;
  */
-async function initServer() {
+async function initServer(): Promise<http.Server> {
   const app = express();
   const apis = express.Router();
 
   // Use dummy storage data for right now
-  setInst(new Database());
+  setInst(new MemDatabase());
   await getInst().doTransaction(async (tr) => {
     await require('../test/data/loader.js').loadIntoDB(tr);
     return true;
@@ -48,12 +48,14 @@ async function initServer() {
     ...config.SESSION_CONFIG,
     store: new FileStore(config.FILE_STORE_CONFIG),
   }));
-  app.use(asyncHan(async (req: Express.Request, res: Express.Response, next) => {
+  app.use(asyncHan(async (req: Express.Request, res: Express.Response, next):
+      Promise<void> => {
     const uid = req.session.uid;
     if (uid !== undefined) {
       const u = new user.User(uid);
       await getInst().doRTransaction((t) => u.reload(t));
       req.user = u;
+      req.session.touch();
     } else {
       req.user = undefined;
     }
@@ -66,6 +68,7 @@ async function initServer() {
   app.use('/api/v1', apis);
 
   // Parse upload files only on /upload
+  /* eslint-disable @typescript-eslint/no-var-requires */
   apis.use('/upload', require('express-fileupload')(config.UPLOAD));
 
   // Insert routes here
@@ -75,6 +78,7 @@ async function initServer() {
   apis.use(require('./routes/login.js'));
   apis.use(require('./routes/team.js'));
   apis.use(require('./routes/project.js'));
+  /* eslint-enable */
 
   app.use((err, req, res, next) => {
     if (!err.statusCode || err.statusCode >= 500) {
@@ -87,7 +91,7 @@ async function initServer() {
   });
 
   const iface = config.IFACE;
-  const server = await new Promise(function(resolve, error) {
+  const server = await new Promise<http.Server>(function(resolve) {
     const ret = app.listen(iface.port, iface.host, () => resolve(ret));
   });
 

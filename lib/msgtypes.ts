@@ -11,7 +11,7 @@ export enum MessageType {
   SUCCESS = 'success',
   UNKNOWN = 'unknown',
   INTERNAL = 'internal',
-};
+}
 
 const mt = MessageType;
 export const codes = {
@@ -27,6 +27,7 @@ export const codes = {
   badproj: mt.ILL_ARG,
   duplicatechoice: mt.ILL_ARG,
   internal: mt.INTERNAL,
+  multifile: mt.ILL_ARG,
   noproject: mt.ILL_STATE,
   nologin: mt.LOGIN,
   nofile: mt.ILL_ARG,

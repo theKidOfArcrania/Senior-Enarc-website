@@ -1,5 +1,6 @@
-/* vim: set ft=javascript: */
-module.exports = {
+/* vim: set ft=typescript: */
+import type typ from './configtypes';
+const opts: typ = {
   BCRYPT_ROUNDS: 12,
   SESSION_CONFIG: {
     saveUninitialized: false,
@@ -35,3 +36,5 @@ module.exports = {
   UPLOAD_IDS: './upload/ids',
   TESTING: false,
 };
+
+export default opts;

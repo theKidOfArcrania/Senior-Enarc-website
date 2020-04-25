@@ -1,25 +1,8 @@
 import type * as db from './dbtypes';
+import type * as ent from './enttypes';
 
-export enum UTDType {
-  STUDENT = 'student',
-  STAFF = 'staff',
-  FACULTY = 'faculty',
-}
+export type {UTDType} from './enttypes';
 
-export interface User {
-  userID: number;
-  uid: number;
-  fname: string;
-  lname: string;
-  email: string;
-  address: string;
-  isUtd: boolean;
-  isEmployee: boolean;
-  teams: number[];
-
-  employee: Employee|null;
-  utd: UTDPersonnel|null;
-}
 
 export interface Uent {
   uid: number;
@@ -35,32 +18,22 @@ export interface Uent {
   normalize(): this;
 }
 
-export interface UTDPersonnel extends Uent {
-  uType: UTDType;
-  netID: string;
-  isAdmin: boolean;
+export interface User extends ent.Users, Uent {
+  teams: number[];
+  employee: Employee|null;
+  utd: UTDPersonnel|null;
+}
 
+export interface UTDPersonnel extends Uent, ent.UTDPersonnel {
   student: Student;
   faculty: Faculty;
   staff: Staff;
 }
 
-export interface Employee extends Uent {
-  worksAt: string;
-  password: string;
-}
-
-export interface Student extends Uent {
-  major: string;
-  resume: string;
-  memberOf: number;
-}
-
+export interface Employee extends Uent, ent.Employee { }
+export interface Student extends Uent, ent.Student { }
 export type Staff = Uent;
-
-export interface Faculty extends Uent {
-  tid: number;
-}
+export interface Faculty extends Uent, ent.Faculty { }
 
 declare global {
   namespace Express { // eslint-disable-line @typescript-eslint/no-namespace
@@ -68,6 +41,7 @@ declare global {
       user: User;
       employee: Employee;
       student: Student;
+      bodySan: any;
     }
   }
 }

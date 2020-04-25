@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
 import type * as typ from './usertypes';
-import {UTDType as utypes} from './usertypes';
+import {UTDType as utypes} from './enttypes';
 import type * as db from './dbtypes';
+import {isNull} from '../util';
+
+export const UTDType = utypes;
 
 /**
  * Syntactical function to reload some field's value or to initialize it if it
@@ -41,7 +44,9 @@ async function getMyTeams<T>(conn: db.DatabaseTransaction<T>, u):
   // Search for all per-project roles
   const pids = await conn.findManagesProject(u.userID);
   for (const pid of pids) {
-    tids.push(await conn.findProjectAssignedTeam(pid));
+    const team = await conn.findProjectAssignedTeam(pid);
+    if (isNull(team)) continue;
+    tids.push(team);
   }
 
   // Search for memberOf role
@@ -87,7 +92,7 @@ abstract class Uent implements typ.Uent {
 /**
  * Contains the data model information of a user.
  */
-class User extends Uent implements typ.User {
+export class User extends Uent implements typ.User {
   userID: number;
   fname: string;
   lname: string;
@@ -140,7 +145,8 @@ class User extends Uent implements typ.User {
 /**
  * Represents the employee data
  */
-class Employee extends Uent implements typ.Employee {
+export class Employee extends Uent implements typ.Employee {
+  euid: number; // should not be accessed!
   uid: number;
   worksAt: string;
   password: string;
@@ -159,6 +165,7 @@ class Employee extends Uent implements typ.Employee {
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadEmployeeInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
     delete res.euid;
     Object.assign(this, res);
   }
@@ -167,7 +174,7 @@ class Employee extends Uent implements typ.Employee {
 /**
  * Represents the UTD personnel data
  */
-class UTDPersonnel extends Uent implements typ.UTDPersonnel {
+export class UTDPersonnel extends Uent implements typ.UTDPersonnel {
   uType: typ.UTDType;
   netID: string;
   isAdmin: boolean;
@@ -189,6 +196,7 @@ class UTDPersonnel extends Uent implements typ.UTDPersonnel {
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadUTDInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
     delete res.uid;
     Object.assign(this, res);
 
@@ -225,10 +233,12 @@ class UTDPersonnel extends Uent implements typ.UTDPersonnel {
  * Represents a student. The students select projects to do and chooses to join
  * certain teams.
  */
-class Student extends Uent implements typ.Student {
+export class Student extends Uent implements typ.Student {
+  suid: number; // should not be accessed!
   major: string;
   resume: string;
   memberOf: number;
+  skills: string[];
 
   /**
    * Creates an student data from a uid
@@ -244,6 +254,7 @@ class Student extends Uent implements typ.Student {
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadStudentInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
     delete res.suid;
     Object.assign(this, res);
   }
@@ -253,8 +264,10 @@ class Student extends Uent implements typ.Student {
  * Represents a faculty. The faculty is allowed a selection of projects (along
  * with the students) to facillate projects of their choosing.
  */
-class Faculty extends Uent implements typ.Faculty {
+export class Faculty extends Uent implements typ.Faculty {
+  fuid: number; // should not be accessed!
   tid: number;
+  choices: number[];
 
   /**
    * Creates an faculty data from a uid
@@ -270,6 +283,7 @@ class Faculty extends Uent implements typ.Faculty {
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
     const res = await conn.loadFacultyInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
     delete res.fuid;
     Object.assign(this, res);
   }
@@ -279,7 +293,7 @@ class Faculty extends Uent implements typ.Faculty {
  * Represents a staff. The staff is allowed to view all projects as needed. They
  * are not allowed to modify any data.
  */
-class Staff extends Uent {
+export class Staff extends Uent {
   /**
    * Creates a staff data from a uid
    * uid - the user ID to associate with this user

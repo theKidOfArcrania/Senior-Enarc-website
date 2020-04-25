@@ -1,8 +1,15 @@
 {
     "compilerOptions": {
         "outDir": "./output",
-        "allowJs": true,
-        "target": "es6"
+        "target": "es6",
+        "sourceMap": true,
+        "noEmitOnError": true,
+        "moduleResolution": "node"
+    },
+    "paths": {
+        "*": [
+            "node_modules/*"
+        ]
     },
     "include": [
         "./lib/**/*",

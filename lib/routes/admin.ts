@@ -1,14 +1,16 @@
-const express = require('express');
-const asyncHan = require('express-async-handler');
+import * as express from 'express';
+import {asyncHan} from '../util';
 
-const {getInst} = require('../model/db.js');
-const msg = require('../msg.js');
-const util = require('../util.js');
+import * as db from '../model/dbtypes';
+import {getInst} from '../model/db';
+import msg from '../msg';
+import * as auth from './auth';
+import * as util from '../util';
 
-const r = new express.Router();
-const admin = new express.Router();
+const r = express.Router();
+const admin = express.Router();
 
-r.use('/admin/', util.login, (req, res, next) => {
+r.use('/admin/', auth.login, (req, res, next) => {
   const u = req.user;
   if (u.isUtd && u.utd.isAdmin) {
     next();
@@ -19,23 +21,41 @@ r.use('/admin/', util.login, (req, res, next) => {
 
 r.use('/admin/', admin);
 
-const trFn = (fn) => (tr, ...args) => tr[fn](...args);
+const trFn = <Args extends any[], DB>(fn: string) =>
+  (tr: db.DatabaseTransaction<DB>, ...args: Args) => tr[fn](...args);
+
+type ID = (string|number);
+
+interface RestAPIOptions {
+  idField: string;
+  parseID: ((string) => (ID|null));
+  processInput?: ((o: util.Jsonable) => Promise<util.Jsonable>);
+  processOutput?: ((o: db.Entity) => Promise<object>);
+  insertFn?: <DB> (tr: db.DatabaseTransaction<DB>, id: ID, ent: any) =>
+    Promise<boolean>;
+  alterFn?: <DB> (tr: db.DatabaseTransaction<DB>, id: ID, ent: any) =>
+    Promise<boolean>;
+  loadFn?: <DB> (tr: db.DatabaseTransaction<DB>, id: ID) =>
+      Promise<util.Some<db.Entity>>;
+  listFn?: <DB> (tr: db.DatabaseTransaction<DB>) => Promise<number[]>;
+  deleteFn?: <DB> (tr: db.DatabaseTransaction<DB>, id: ID) => Promise<boolean>;
+}
+
 /**
  * Creates a full rest API for some entity type (for the admin). This includes
  * retrival (GET), updating (PUT), creating (POST), and deletion (DELETE), and
  * list retrivals.
  *
- * @param {String} entity the entity name to create rest API for.
- * @param {Object} opts   this is an object of options to customize how each
- *                        endpoint should behave. Use the *Fn to define a custom
- *                        action (the first argument is the transaction object,
- *                        and the following arguments are those normally passed
- *                        to that action. idField should be the unique
- *                        identifier of each entity, and parseID should be a
- *                        function that parses a string to ID (and if it fails,
- *                        returns NULL).
+ * @param entity - the entity name to create rest API for.
+ * @param opts - this is an object of options to customize how each endpoint
+ *               should behave. Use the *Fn to define a custom action (the first
+ *               argument is the transaction object, and the following arguments
+ *               are those normally passed to that action. idField should be the
+ *               unique identifier of each entity, and parseID should be a
+ *               function that parses a string to ID (and if it fails, returns
+ *               NULL).
  */
-function restAPIFor(entity, opts = {}) {
+function restAPIFor(entity, opts: RestAPIOptions): void {
   const entity2 = entity.toLowerCase();
   util.objDefault(opts, 'processInput', util.ident);
   util.objDefault(opts, 'processOutput', util.ident);
@@ -44,15 +64,13 @@ function restAPIFor(entity, opts = {}) {
   util.objDefault(opts, 'loadFn', trFn(`load${entity}Info`));
   util.objDefault(opts, 'listFn', trFn(`findAll${entity}s`));
   util.objDefault(opts, 'deleteFn', trFn(`delete${entity}`));
-  if (!opts.idField) throw new Error('Must have opts.idField');
-  if (!opts.parseID) throw new Error('Must have opts.parseID');
 
   // Create a new entity
   admin.post(`/${entity}`, asyncHan(async (req, res) => {
     const data = await opts.processInput(req.bodySan);
     const success = await getInst().doTransaction(async (tr) => {
       const id = await tr.findUniqueID(entity);
-      return (await tr[opts.insertFn](id, data)) && {id};
+      return (await opts.insertFn(tr, id, data)) && {id};
     });
     if (success) {
       res.json(msg.success('Success!', success));
@@ -64,9 +82,9 @@ function restAPIFor(entity, opts = {}) {
   // Update an entity
   admin.put(`/${entity2}`, asyncHan(async (req, res) => {
     const data = await opts.processInput(req.bodySan);
-    const id = data[opts.idField];
+    const id: ID = data[opts.idField] as ID;
     delete data[opts.idField];
-    const success = await getInst().doTransaction(opts.alterFn, id, data);
+    const success = await getInst().doTransaction(opts.alterFn, 1000, id, data);
     if (success) {
       res.json(msg.success('Success!'));
     } else {
@@ -75,22 +93,15 @@ function restAPIFor(entity, opts = {}) {
   }));
 
   // Get an entity
-  admin.get(`/${entity2}`, asyncHan(async (req, res) => {
+  admin.get(`/${entity2}`, asyncHan<{id: string}>(async (req, res) => {
     const id = opts.parseID(req.query.id);
     if (id === undefined || id === null) {
       res.json(msg.fail('Invalid request format!', 'badformat'));
       return;
     }
 
-    let ent;
-    try {
-      ent = await getInst().doRTransaction(opts.loadFn, id);
-    } catch (e) {
-      if (!e.dberror) throw e;
-      ent = null;
-    }
-
-    if (ent === null) {
+    const ent = await getInst().doRTransaction(opts.loadFn, 1000, id);
+    if (util.isNull(ent)) {
       res.json(msg.fail('Cannot find entity', 'notfound'));
     } else {
       res.json(msg.success('Success!', await opts.processOutput(ent)));
@@ -108,11 +119,11 @@ function restAPIFor(entity, opts = {}) {
     const ids = Array.prototype.slice.call(req.bodySan);
     const result = {};
     await getInst().doRTransaction(async (tr) => {
-      await Promise.all(ids.map(async (id) => {
-        try {
-          result[id] = await opts.loadFn(tr, id).then(opts.processOutput);
-        } catch (e) {}
-      }));
+      for (const id of ids) {
+        const ent = await opts.loadFn(tr, id).then(opts.processOutput);
+        if (util.isNull(ent)) continue;
+        result[id] = ent;
+      }
     });
     res.json(msg.success('Success', result));
   }));
@@ -132,10 +143,12 @@ function restAPIFor(entity, opts = {}) {
 
 const parseInt2 = (val) =>
   ((val2) => Number.isInteger(val2) ? val2 : null)(parseInt(val));
-const chkPass = async (inp) => {
-  if (!util.isNullOrUndefined(inp.password)) {
-    inp.password = await util.hashPassword(inp.password);
+const chkPass = async <T extends util.Jsonable>(inp: T): Promise<T> => {
+  const inp2 = (inp as unknown as {password: any});
+  if (!util.isNullOrUndefined(inp2.password)) {
+    inp2.password = await util.hashPassword(inp2.password);
   }
+  return inp;
 };
 
 // TODO: bulk for creating semester roster
@@ -193,11 +206,13 @@ restAPIFor('Team', {
   parseID: parseInt2,
   processInput: chkPass,
 });
+
 // TODO: user subclasses
 restAPIFor('User', {
   idField: 'userID',
   parseID: parseInt2,
   processInput: chkPass,
+  processOutput: (u) => u.normalize(),
 });
 
 admin.use((err, req, res, next) => {
