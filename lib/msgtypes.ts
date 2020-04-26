@@ -7,7 +7,7 @@ export enum MessageType {
   LOGIN = 'login',
   PERM = 'perm',
   ILL_ARG = 'ill-arg',
-  ILL_STATE = 'internal',
+  ILL_STATE = 'ill-state',
   SUCCESS = 'success',
   UNKNOWN = 'unknown',
   INTERNAL = 'internal',

@@ -1,115 +1,60 @@
-<style>
-input[type=text] {
-  width: 400px;
-}
-textarea {
-  width: 500px;
-  height: 200px;
-}
-li.item {
-  cursor: pointer;
-}
-li.item:hover {
-  background-color: lightgray;
-  font-style: italic;
-}
-li.item:active {
-  background-color: gray;
-  font-style: italic;
-  color: white;
-}
+<!-- HTML for static distribution bundle build -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="./swagger-ui.css" >
+    <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />
+    <style>
+      html
+      {
+        box-sizing: border-box;
+        overflow: -moz-scrollbars-vertical;
+        overflow-y: scroll;
+      }
 
-.hide {
-  display: none
-}
+      *,
+      *:before,
+      *:after
+      {
+        box-sizing: inherit;
+      }
 
-</style>
+      body
+      {
+        margin:0;
+        background: #fafafa;
+      }
+    </style>
+  </head>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script>
-function updateData() {
-  if ($('.chk-data')[0].checked) {
-    $('.file').addClass('hide');
-    $('.data').removeClass('hide');
-  } else {
-    $('.data').addClass('hide');
-    $('.file').removeClass('hide');
-  }
-}
-function submitData() {
-  const configs = {
-    url: $("#url")[0].value,
-    data: $("#data")[0].value,
-    method: $("#req")[0].value,
-    contentType: "application/json",
-    xhrFields: {
-      withCredentials: true,
-    },
-    isData: $('.chk-data')[0].checked,
-  };
-  if (!configs.isData) {
-    data = new FormData();
-    data.append('file', $('#file')[0].files[0]);
-    configs.data = data;
-    configs.contentType = false; 
-    configs.processData = false; 
-  }
+  <body>
+    <div id="swagger-ui"></div>
 
-  const item = document.createElement('li');
-  item.addEventListener("click", function() {
-    $("#url")[0].value = configs.url;
-    if (configs.isData) {
-      $("#data")[0].value = configs.data;
-      $('.chk-data')[0].checked = true;
-    } else {
-      $('.chk-file')[0].checked = true;
+    <script src="./swagger-ui-bundle.js"> </script>
+    <script src="./swagger-ui-standalone-preset.js"> </script>
+    <script>
+    window.onload = function() {
+      // Begin Swagger UI call region
+      const ui = SwaggerUIBundle({
+        url: "./swagger.yaml",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      })
+      // End Swagger UI call region
+
+      window.ui = ui
     }
-    $("#req")[0].value = configs.method;
-  });
-  item.className = "item";
-
-  let txt = configs.method + " " + configs.url + ": ";
-  item.innerText = txt + '[PENDING]';
-
-  $("#prev").prepend(item);
-
-  $.ajax(configs).done(function(data) {
-    $("#status").text("(Success)");
-    $("#output")[0].value = JSON.stringify(data);
-    item.innerText = txt + "success";
-  }).fail(function(xhr) {
-    $("#status").text("(Failed)");
-    $("#output")[0].value = xhr.status + " " + xhr.statusText;
-    item.innerText = txt + "fail";
-  });
-}
-</script>
-
-<form onsubmit="submitData(); return false" >
-  <p><label> URL: <input type="text" id="url" value="/"> </label>
-  <p><label>
-    Request type: 
-    <select id="req">
-      <option value="GET">GET</option>
-      <option value="POST">POST</option>
-      <option value="PUT">PUT</option>
-      <option value="DELETE">DELETE</option>
-    </select>
-  </label>
-  <p><input name="data-type" type="radio" class="chk-data" value="Data" checked> Use Data<br>
-     <input name="data-type" type="radio" class="chk-file" value="File"> Use File
-  <p class="data"><label>Data: <br> <textarea id="data"></textarea></label>
-  <p class="file hide"><label>Upload file: <input id="file" type="file"></label>
-  <p><label>Output <span id="status"></span>: <br> <textarea id="output"></textarea></label>
-  <p><input type="button" value="Submit" onclick="submitData()">
-</form>
-
-<ul id="prev">
-
-</ul>
-
-<script>
-$(".chk-data").click(updateData);
-$(".chk-file").click(updateData);
-updateData();
-</script>
+  </script>
+  </body>
+</html>

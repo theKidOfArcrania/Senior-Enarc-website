@@ -1,0 +1,778 @@
+swagger: "2.0"
+info:
+  description: "This is the senior enarc project, which is a new way to manage the CS senior design projects. Use this page to browse all the API endpoints allowed by the backend."
+  version: "1.0.0"
+  title: "Senior Enarc Backend"
+  termsOfService: ""
+  contact:
+    email: "team@example.com"
+  license:
+    name: "License type"
+    url: "http://example.com"
+host: "enarc.thekidofarcrania.com"
+basePath: "/api/v1"
+tags:
+- name: "files"
+  description: "uploading/downloading file links"
+- name: "login"
+  description: "your essential login credentials"
+- name: "project"
+  description: "operations about user"
+- name: "team"
+  description: "working in your project teams"
+- name: "admin"
+  description: "admin control panel to tweak all the information"
+schemes:
+- "https"
+- "http"
+paths:
+  /file/{fileid}:
+    get:
+      tags:
+      - files
+      summary: Download a file
+      parameters:
+      - name: fileid
+        in: path
+        description: The file ID given by the upload response
+        type: string
+        required: true
+        default: "169566910544605184db239e4409ef4bd0"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            type: string
+            format: binary
+  /upload:
+    post:
+      tags:
+      - "files"
+      summary: "Upload a file"
+      description: "You must be logged in to upload files"
+      consumes:
+      - "multipart/form-data"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "file"
+        in: "formData"
+        description: "File to upload"
+        required: true
+        type: "file"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: object
+              properties:
+                body:
+                  name:
+                    type: string
+                    example: "169566910544605184db239e4409ef4bd0"
+  /checksess:
+    get:
+      tags:
+      - "login"
+      summary: "Test whether if you are logged in or not."
+      description: "You can also see some basic user information about yourself in the body parameter output"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: object
+              properties:
+                body:
+                  allOf:
+                  - $ref: "#/definitions/User"
+                  - $ref: "#/definitions/Employee"
+                  - $ref: "#/definitions/UTDPersonnel"
+  /login:
+    post:
+      tags:
+      - "login"
+      summary: "Sponsor/employee login"
+      consumes: 
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "Sponsor email/password (password is sha256 hashed)"
+        required: true
+        schema:
+          type: "object"
+          required:
+          - email
+          - password
+          properties:
+            email:
+              type: string
+              example: "test@example.com"
+            password:
+              type: string
+              example: "e57d6bc29d3dea8292b71ac3ceb4aea5eea0c48d59871702d78f9a01f1acb1ca"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /utdlogin:
+    post:
+      tags:
+      - "login"
+      summary: "UTD personnel login (uses SSO)"
+      description: This should be some link that redirects to SSO. For now just specify any email and login as that one
+      consumes: 
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "Email information"
+        required: true
+        schema:
+          type: "object"
+          required:
+          - email
+          properties:
+            email:
+              type: string
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /logout:
+    post:
+      tags:
+      - "login"
+      summary: "Log out user"
+      description: Destroys the session cookie on logout
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: "object"
+  /project:
+    get:
+      tags:
+      - "project"
+      summary: "Get current project"
+      description: ""
+      deprecated: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  $ref: "#/definitions/Project"
+    post:
+      tags:
+      - "project"
+      summary: "Obtain a list of project"
+      description: "Retrieves a list of project. Note that the actual projects returned, and what is visible for each project is restricted by the specific user (i.e. the user's status determines permissions of what projects are visible)"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "The list to retrieve"
+        schema:
+          type: "array"
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: "object"
+                  additionalProperties:
+                    $ref: "#/definitions/Project"
+    put:
+      tags:
+      - "project"
+      summary: "Edit a project proposal"
+      description: "You must be an employee to use this endpoint. None of the fields are required except for the projID field"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "Pass values that you want to change. projID is required. image and projDoc must be valid file IDs (or null). If they are null, then that effects to deleting the image."
+        schema:
+          type: "object"
+          required: 
+          - projID
+          properties:
+              projID:
+                type: integer
+              pName:
+                type: string
+                maxLength: 50
+              image:
+                type: string
+                maxLength: 100
+                example: 169566910544605184db239e4409ef4bd0
+              projDoc:
+                type: string
+                maxLength: 100
+                example: 169566910544605184db239e4409ef4bd0
+              pDesc:
+                type: string
+                maxLength: 1000
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /project/submit:
+    post:
+      tags:
+      - "project"
+      summary: "Submit a project proposal"
+      description: "You must be an employee to use this endpoint. Specify all fields!"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: ""
+        schema:
+          type: "object"
+          required: 
+          - projID
+          properties:
+              pName:
+                type: string
+                maxLength: 50
+              image:
+                type: string
+                maxLength: 100
+                example: 169566910544605184db239e4409ef4bd0
+              projDoc:
+                type: string
+                maxLength: 100
+                example: 169566910544605184db239e4409ef4bd0
+              pDesc:
+                type: string
+                maxLength: 1000
+              sponsor:
+                type: integer
+              mentor:
+                type: integer
+
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /project/list:
+    get:
+      tags:
+      - "project"
+      summary: "Get full list of viewable projects"
+      description: "This obtains the list of all projects viewable by this user. Note that this may not contain every project as some might be hidden or not viewable by the user"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: array
+                  items: 
+                    type: integer
+                  example: [0,1,2,3]
+  /project/mylist:
+    get:
+      tags:
+      - "project"
+      summary: "Get list of my projects"
+      description: "This obtains the list of projects that the user is involved in. This will always be a subset of the list given in /project/list (and they may be the same set of numbers)"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: array
+                  items: 
+                    type: integer
+                  example: [0,1,2,3]
+  /team:
+    get:
+      tags:
+      - "team"
+      summary: "Get current team"
+      description: ""
+      deprecated: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  $ref: "#/definitions/Project"
+    post:
+      tags:
+      - "team"
+      summary: "Obtain a list of all teams"
+      description: "Retrieves a list of all teams. Note that the actual teams returned, and what is visible for each team is restricted by the specific user (i.e. the user's status determines permissions of what teams are visible)"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "The list to retrieve"
+        schema:
+          type: "array"
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: "object"
+                  additionalProperties:
+                    $ref: "#/definitions/Team"
+    put:
+      tags:
+      - "team"
+      summary: "Modify a team"
+      description: "You must be the team captain for your current team to modify that team information. Since you can only modify the team you are in, tid is not needed."
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "Pass values that you want to change. projID is required. image and projDoc must be valid file IDs (or null). If they are null, then that effects to deleting the image."
+        schema:
+          type: "object"
+          required: 
+          - projID
+          properties:
+              name:
+                type: string
+                maxLength: 50
+              leader:
+                type: integer
+              password:
+                type: string
+                example: 394f6a21898a56d2b5534ff6bd7c656052e272cbe3399c4906f1c4e66653ae67
+                maxLength: 64
+              choices:
+                type: array
+                items:
+                  type: integer
+                  minLength: 6
+                  maxLength: 6
+                example: [1,2,3,4,5,6]
+              comments:
+                type: string
+                maxLength: 1000
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /team/join:
+    post: 
+      tags:
+      - "team"
+      summary: "Join a team"
+      description: "If the team is public, leave password = null, otherwise give a hashed password for the team to join"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "The team to join"
+        schema:
+          type: "object"
+          properties:
+            team: 
+              type: number
+            password:
+              type: string
+              example: null
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /team/leave:
+    post: 
+      tags:
+      - "team"
+      summary: "Leave your team"
+      description: "You cannot leave if you are the captain, (unless you are the only member in the team). Make someone else a captain first using PUT /team"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /team/member:
+    delete:
+      tags:
+      - "team"
+      summary: "Delete some team members"
+      description: "You must be the team captain of your current team. Use this to remove a list of users (except for yourself)"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "The list of user IDs"
+        schema:
+          type: "array"
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /team/list:
+    get:
+      tags:
+      - "team"
+      summary: "Get full list of viewable teams"
+      description: "This obtains the list of all teams viewable by this user. Note that this may not contain every team as some might be hidden or not viewable by the user"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: array
+                  items: 
+                    type: integer
+                  example: [0,1,2,3]
+  /team/mylist:
+    get:
+      tags:
+      - "team"
+      summary: "Get list of my teams"
+      description: "This obtains the list of teams that the current user is in (either sponsoring/mentoring/advising/or student). This will always be a subset of the list given in /team/list (and they may be the same set of numbers). Most students may only have one item in this list"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body: 
+                  type: array
+                  items: 
+                    type: integer
+                  example: [0,1,2,3]
+securityDefinitions:
+  petstore_auth:
+    type: "oauth2"
+    authorizationUrl: "http://petstore.swagger.io/oauth/dialog"
+    flow: "implicit"
+    scopes:
+      write:pets: "modify pets in your account"
+      read:pets: "read your pets"
+  api_key:
+    type: "apiKey"
+    name: "api_key"
+    in: "header"
+definitions:
+  Message:
+    type: "object"
+    properties:
+      msg:
+        type: "string"
+      success:
+        type: "boolean"
+        default: true
+        description: "Whether if a message is successful"
+      category:
+        type: "string"
+        default: success
+        enum: 
+        - login
+        - perm
+        - ill-arg
+        - ill-state
+        - success
+        - unknown
+        - internal
+  User:
+    type: "object"
+    properties:
+      userID: 
+        type: "integer"
+      fname: {type: "string", maxLength: 50}
+      lname: {type: "string", maxLength: 50}
+      email: {type: "string", maxLength: 100}
+      address: {type: "string", maxLength: 100}
+      isUtd: {type: "boolean"}
+      isEmployee: {type: "boolean"}
+  Employee:
+    allOf: 
+    - $ref: "#/definitions/User"
+    - type: object
+      properties:
+        euid:
+          type: integer
+        worksAt: 
+          type: string
+          maxLength: 50
+        password: 
+          type: string
+          maxLength: 100
+  Company:
+    type: object
+    properties:
+      name:
+        type: string
+        maxLength: 50
+      logo:
+        type: string
+        maxLength: 100
+      manager:
+        type: integer
+  UTDPersonnel:
+    allOf:
+    - $ref: "#/definitions/User"
+    - type: object
+      properties:
+        uid:
+          type: integer
+        uType:
+          type: string
+          enum:
+          - student
+          - staff
+          - faculty
+        netID:
+          type: string
+          maxLength: 10
+        isAdmin:
+          type: boolean
+  Faculty:
+    allOf:
+    - $ref: "#/definitions/UTDPersonnel"
+    - type: object
+      properties:
+        fuid:
+          type: integer
+        tid:
+          type: integer
+  Student:
+    allOf:
+    - $ref: "#/definitions/UTDPersonnel"
+    - type: object
+      properties:
+        suid:
+          type: integer
+        major:
+          type: string
+          maxLength: 30
+        resume:
+          type: string
+          maxLength: 100
+        memberOf:
+          type: integer
+        skills:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+  Project:
+    type: object
+    properties:
+      projID:
+        type: integer
+      pName:
+        type: string
+        maxLength: 50
+      company:
+        type: string
+        maxLength: 50
+      image:
+        type: string
+        maxLength: 100
+      projDoc:
+        type: string
+        maxLength: 100
+      pDesc:
+        type: string
+        maxLength: 1000
+      mentor:
+        $ref: '#/definitions/Employee'
+      sponsor:
+        $ref: '#/definitions/Employee'
+      advisor:
+        $ref: '#/definitions/Faculty'
+      skillsReq:
+        type: array
+        items:
+          type: string
+          maxLength: 50
+      status:
+        type: string
+        default: submitted
+        enum:
+        - submitted
+        - needs-revision
+        - accepted
+        - rejected
+        - archived
+      visible:
+        type: boolean
+  Team:
+    type: object
+    properties:
+      tid:
+        type: integer
+      name:
+        type: string
+        maxLength: 50
+      assignedProj:
+        type: integer
+      budget:
+        type: number
+      leader:
+        type: integer
+      membLimit:
+        type: integer
+      members:
+        type: array
+        items: 
+          $ref: '#/definitions/Student'
+      password:
+        type: string
+        maxLength: 100
+      comments:
+        type: string
+        maxLength: 1000
+      choice:
+        type: array
+        items:
+          type: integer
+        maxLength: 6
+        minLength: 6
+  HelpTicket:
+    type: object
+    properties:
+      hid:
+        type: integer
+      hStatus:
+        type: string 
+        default: open
+        enum:
+        - open
+        - closed
+        - resolved
+      hDescription:
+        type: string
+        maxLength: 1000
+      requestor:
+        type: integer
+  Invite:
+    type: object
+    properties:
+      inviteID:
+        type: integer
+      expiration:
+        type: string
+        format: date
+      company:
+        type: string
+        maxLength: 50
+      managerFname:
+        type: string
+        maxLength: 50
+      managerLname:
+        type: string
+        maxLength: 50
+      managerEmail:
+        type: string
+        maxLength: 100
+
+
+
+externalDocs:
+  description: "Find out more about Swagger"
+  url: "http://swagger.io"

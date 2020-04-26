@@ -3,8 +3,8 @@ import * as morgan from 'morgan';
 import {asyncHan} from './util';
 import {promises as fs} from 'fs';
 import * as session from 'express-session';
+import * as swagger from 'swagger-ui-dist';
 import type * as http from 'http';
-
 
 import * as filestore from 'session-file-store';
 const FileStore = filestore(session);
@@ -66,6 +66,7 @@ export default async function initServer(): Promise<http.Server> {
   }));
 
   app.use(express.static('static'));
+  app.use(express.static(swagger.absolutePath()));
 
   // All api calls should fall under /api/v1 path
   app.use('/api/v1', apis);
