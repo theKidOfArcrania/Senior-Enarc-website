@@ -260,12 +260,13 @@ export function objDefault(obj: object, prop: string, defaultVal: any): void {
 
 export * from 'util';
 
-export const fnew = (F, ...a) => new F(...a);
-export const f = (fn, ...args) => fn.bind(null, ...args);
-export const ft = (fn, _this, ...args) => fn.bind(_this, ...args);
-export const norder = (a, b) => a - b;
-export const ident = (x) => x;
-export const caseInsensOrder = (a, b) =>
+export const fnew = (F, ...a): any => new F(...a);
+export const f = (fn, ...args): any => fn.bind(null, ...args);
+export const ft = <Args extends any[], Ret>(fn: (...args: Args) => Ret,
+  _this: any, ...args: Args): Ret => fn.bind(_this, ...args);
+export const norder = (a: number, b: number): number => a - b;
+export const ident = <T>(x: T): T => x;
+export const caseInsensOrder = (a: string, b: string): number =>
   a.toLowerCase().localeCompare(b.toLowerCase());
 export const asyncHan = <P extends core.Params = core.ParamsDictionary,
   ResBody = any, ReqBody = any, ReqQuery = core.Query>(fn:
@@ -287,12 +288,16 @@ export type Check<Succ, Fail> = [true, Succ] | [false, Fail];
  */
 export function isSuccess<S, F>(chk: Check<S, F>): chk is [true, S] {
   return chk[0];
-} 
+}
 
 /** Returns a success monad */
-export function Success<S>(succ: S): [true, S] {return [true, succ];}
+export function Success<S>(succ: S): [true, S] {
+  return [true, succ];
+}
 /** Returns a fail monad */
-export function Fail<F>(fail: F): [false, F] {return [false, fail];}
+export function Fail<F>(fail: F): [false, F] {
+  return [false, fail];
+}
 
 /**
  * This is a special typeguard to test whether if something is null or not. This
@@ -314,46 +319,8 @@ declare global {
   interface Array<T> {
     nsort: () => Array<T>;
   }
-
-  interface Function {
-    then: <Chained, Ret> (next: (Chained) => Ret) => ((...args) => Ret);
-    // nice: (def: any) => any;
-  }
 }
 
 Array.prototype.nsort = function(): any[] {
   return Array.prototype.sort.call(this, module.exports.norder);
 };
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const AsyncFunction = (async function(): Promise<void> {}).constructor;
-AsyncFunction.prototype.then = function(next) {
-  const _this = this;
-  return (...args) => {
-    return _this(...args).then(next);
-  };
-};
-AsyncFunction.prototype.nice = function(defVal = null) {
-  const _this = this;
-  return (...args) => {
-    return _this(...args).catch(() => defVal);
-  };
-};
-
-Function.prototype.then = function(next) {
-  const _this = this;
-  return (...args) => {
-    return next(_this(...args));
-  };
-};
-
-// Function.prototype.nice = function(defVal = null) {
-//   const _this = this;
-//   return (...args) => {
-//     try {
-//       return _this(...args);
-//     } catch (e) {
-//       return defVal;
-//     }
-//   };
-// };

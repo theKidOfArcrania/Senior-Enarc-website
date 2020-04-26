@@ -17,7 +17,7 @@ import MemDatabase, {getInst, setInst} from './model/db.js';
 /**
  * Initializes the server;
  */
-async function initServer(): Promise<http.Server> {
+export default async function initServer(): Promise<http.Server> {
   const app = express();
   const apis = express.Router();
 
@@ -106,5 +106,3 @@ if (!config.TESTING) {
     console.error(err);
   });
 }
-
-module.exports = initServer;

@@ -8,7 +8,7 @@ config.TESTING = true;
 
 import SQLDatabase from './model/sqldb.js';
 
-import loader from '../test/data/loader.js';
+import loadIntoDB from '../test/data/loader.js';
 
 
 const rl = readline.createInterface({
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   let commit = false;
   const trans = await db.beginTransaction();
   try {
-    await loader.loadIntoDB(trans);
+    await loadIntoDB(trans);
     for (;;) {
       const qstr = await getline();
       if (qstr === undefined) break;

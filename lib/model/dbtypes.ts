@@ -6,6 +6,10 @@ export type Tables = 'USER' | 'PROJECT' | 'UTD_PERSONNEL' | 'FACULTY' |
   'STUDENT' | 'EMPLOYEE' | 'COMPANY' | 'FACULTY_OR_TEAM' | 'TEAM' | 'CHOICE' |
   'HELP_TICKET' | 'INVITE';
 
+export type Tables2 = 'User' | 'Project' | 'UTD' | 'Faculty' | 'Student' |
+  'Employee' | 'Company' | 'FacultyOrTeam' | 'Team' | 'Choice' | 'HelpTicket' |
+  'Invite';
+
 export type Entity = {[P: string]: any};
 
 /**

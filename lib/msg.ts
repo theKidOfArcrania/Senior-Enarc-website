@@ -8,7 +8,8 @@ export default class Message {
   msg: string;
   success: boolean;
   category: MessageType;
-  body: object;
+  debug: keyof typeof codes;
+  body: any;
 
   /**
    * Convenience constructor for a success message
@@ -16,7 +17,7 @@ export default class Message {
    * @param msg - the string message
    * @param body - the payload body
    */
-  static success(msg: string, body: object = null): Message {
+  static success(msg: string, body: any = null): Message {
     return new Message(msg, true, MessageType.SUCCESS, body);
   }
 
@@ -28,11 +29,9 @@ export default class Message {
    */
   static fail(msg: string, debug: keyof typeof codes): Message {
     const catg = codes[debug];
-    if (config.TESTING) {
-      return new Message(msg, false, catg, {debug});
-    } else {
-      return new Message(msg, false, catg, null);
-    }
+    const m = new Message(msg, false, catg, null);
+    if (config.TESTING) m.debug = debug;
+    return m;
   }
 
   /**

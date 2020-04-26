@@ -146,3 +146,16 @@ export interface Invite {
   managerLname: Some<string>;
   managerEmail: Some<string>;
 }
+
+export interface DB {
+  COMPANY: Company[];
+  EMPLOYEE: Employee[];
+  FACULTY: Faculty[];
+  HELP_TICKET: HelpTicket[];
+  INVITE: Invite[];
+  PROJECT: Project[];
+  STUDENT: Student[];
+  TEAM: Team[];
+  USER: Users[];
+  UTD_PERSONNEL: UTDPersonnel[];
+}

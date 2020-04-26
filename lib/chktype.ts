@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as assert from 'assert';
-import * as util from './util';
 import msg from './msg';
 import config from './config';
 

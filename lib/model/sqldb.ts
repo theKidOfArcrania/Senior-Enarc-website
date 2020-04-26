@@ -487,7 +487,7 @@ export default class SQLDatabase extends typ.Database<mysql.PoolConnection> {
       // Connection timeout...
 
       // Make sure this doesn't leak when it finally does connect.
-      waitConn.then((conn) => conn.release()).catch(() => false);
+      waitConn.then(util.ft.bind(conn.release)).catch(() => false);
       throw new typ.DBError('Timeout exceeded');
     }
   }

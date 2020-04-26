@@ -511,14 +511,12 @@ export default class MemDatabase extends typ.Database<MemDB> {
   constructor() {
     super();
 
-    if (this.constructor === Database) {
-      this._lock = new Reentrant();
-      this._db = {
-        USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-        STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
-        CHOICE: {}, HELP_TICKET: {}, INVITE: {},
-      };
-    }
+    this._lock = new Reentrant();
+    this._db = {
+      USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
+      STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
+      CHOICE: {}, HELP_TICKET: {}, INVITE: {},
+    };
   }
 
   /**

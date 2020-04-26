@@ -22,7 +22,7 @@ r.use('/admin/', auth.login, (req, res, next) => {
 r.use('/admin/', admin);
 
 const trFn = <Args extends any[], DB>(fn: string) =>
-  (tr: db.DatabaseTransaction<DB>, ...args: Args) => tr[fn](...args);
+  (tr: db.DatabaseTransaction<DB>, ...args: Args): any => tr[fn](...args);
 
 type ID = (string|number);
 
@@ -141,8 +141,8 @@ function restAPIFor(entity, opts: RestAPIOptions): void {
   }));
 }
 
-const parseInt2 = (val) =>
-  ((val2) => Number.isInteger(val2) ? val2 : null)(parseInt(val));
+const parseInt2 = (val): number =>
+  (((val2): number => Number.isInteger(val2) ? val2 : null)(parseInt(val)));
 const chkPass = async <T extends util.Jsonable>(inp: T): Promise<T> => {
   const inp2 = (inp as unknown as {password: any});
   if (!util.isNullOrUndefined(inp2.password)) {

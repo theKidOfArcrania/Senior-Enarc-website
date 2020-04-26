@@ -1,59 +1,47 @@
-// const danglingTest = require('../lib/dangling.js');
-// if (!process.env['DANGLING_TEST']) danglingTest.disable();
+import * as assert from 'assert';
 
-const config = require('../lib/config.js');
+import config from '../lib/config';
 config.TESTING = true;
 
-const assert = require('assert');
-const user = require('../lib/model/user.js');
-const {Database} = require('../lib/model/db.js');
-const sql = require('../lib/model/sqldb.js');
-const util = require('../lib/util.js');
+import * as user from '../lib/model/user';
+import Database from '../lib/model/db.js';
+import SQLDatabase from '../lib/model/sqldb.js';
+import * as util from '../lib/util.js';
 
-const utypes = user.UTDPersonnel.types;
+import * as dtyp from '../lib/model/dbtypes';
+import * as utyp from '../lib/model/usertypes';
+import {UTDType as utypes} from '../lib/model/enttypes';
 
-const loader = require('./data/loader.js');
+import * as loader from './data/loader';
+import loadIntoDB from './data/loader';
 
 const db2 = loader.db;
 
 /**
- * Transforms a function into a filter function.
- * @param {Function} fn    the function
- * @return {Function} the transformed version.
- */
-function filter(fn) {
-  fn.then = function(thenFilt) {
-    return filter(function(x) {
-      x = fn(x);
-      return x && thenFilt(x);
-    });
-  };
-  return fn;
-}
-
-/**
  * Asserts that the expected list equals the actual list, after disregarding
  * order of elements
- * @param {String[]} actual      the actual elements found
- * @param {String[]} expected    the expected elements
+ * @param actual - the actual elements found
+ * @param expected - the expected elements
  */
-function equalsList(actual, expected) {
+function equalsList<T extends any[]>(actual: T, expected: T): void {
   const act = Array.prototype.slice.call(actual).sort();
   const exp = Array.prototype.slice.call(expected).sort();
   assert.deepStrictEqual(act, exp);
 }
 
 
+/* eslint-disable no-invalid-this */
+
 /**
  * This verifies that a DB model is correct and valid.
- * @param {Object} db   the db object model to test
+ * @param db - the db object model to test
  */
-function verifyModel(db) {
-  let model;
+function verifyModel<DB>(db: dtyp.Database<DB>): void {
+  let model: dtyp.DatabaseTransaction<DB>;
   before(async function() {
     this.timeout(30000);
     model = await db.beginTransaction();
-    await loader.loadIntoDB(model);
+    await loadIntoDB(model);
   });
 
   after(async function() {
@@ -67,7 +55,7 @@ function verifyModel(db) {
 
   describe('nested transactions', function() {
     it('begin with commit will keep changes', async function() {
-      help = {
+      const help = {
         hid: 61337,
         hStatus: 'open',
         hDescription: 'Hello world!',
@@ -84,7 +72,7 @@ function verifyModel(db) {
     });
 
     it('restore only respective SP', async function() {
-      help = {
+      const help = {
         hid: 31337,
         hStatus: 'open',
         hDescription: 'Hello world!',
@@ -115,7 +103,7 @@ function verifyModel(db) {
     for (const [tbl, mthName] of loads) {
       describe('table ' + tbl, function() {
         it('has correct value', async function() {
-          tb = db2[tbl];
+          const tb = db2[tbl];
           for (const [pkey, ent] of tb) {
             const actual = await model['load' + mthName + 'Info'](pkey);
             assert.deepStrictEqual(actual, ent);
@@ -124,50 +112,45 @@ function verifyModel(db) {
       });
     }
 
+    type UserFilt<T> = (u: utyp.User) => T;
     describe('user', function() {
       // Various filters to see different views of a user
-      const utdFilt = filter((uu) => (uu.isUtd && uu.utd));
-      const empFilt = filter((uu) => (uu.isEmployee && uu.employee));
-      const stuFilt = utdFilt.then((utd) =>
-        (utd.uType === utypes.STUDENT && utd.student));
-      const facFilt = utdFilt.then((utd) =>
-        (utd.uType === utypes.FACULTY && utd.faculty));
-      const staffFilt = utdFilt.then((utd) =>
-        (utd.uType === utypes.STAFF && utd.staff));
+      const utdFilt = (uu: utyp.User) => (uu.isUtd && uu.utd);
+      const empFilt = (uu: utyp.User) => (uu.isEmployee && uu.employee);
+      const stuFilt = (uu: utyp.User) => (uu.isUtd &&
+        uu.utd.uType == utypes.STUDENT && uu.utd.student);
+      const facFilt = (uu: utyp.User) => (uu.isUtd &&
+        uu.utd.uType == utypes.FACULTY && uu.utd.faculty);
+      const staffFilt = (uu: utyp.User) => (uu.isUtd &&
+        uu.utd.uType == utypes.STAFF && uu.utd.staff);
 
       /**
        * Iterate through each user, filtering/modifying each user based on the
        * filter function, and then running the aaction function on the user.
        *
-       * @param {Function} filter    a filter that modifies/removes the user
-       *                             object
-       * @param {Function} action    the action to run per user
-       * @return {Function} a function that iterates through all users
+       * @param filter - a filter that modifies/removes the user object
+       * @param action - the action to run per user
        */
-      function forEachUsersB(filter, action) {
-        return function() {
-          pms = [];
-          for (const u of loader.users) {
-            let uu = new user.User(u);
-            pms.push(uu.reload(model).then((_) => {
-              uu = filter(uu);
-              if (uu) {
-                action(u, uu);
-              }
-            }));
+      function forEachUsersB<T>(filter: UserFilt<T>,
+          action: (arg1: number, arg2: T) => void) {
+        return async function(): Promise<void> {
+          for (const uid of loader.users) {
+            const u = new user.User(uid);
+            await u.reload(model);
+            const filt = filter(u);
+            if (filt) action(uid as number, filt);
           }
-          return Promise.all(pms);
         };
       }
 
       /**
        * Checks that a particular view of the user object has a proper type.
-       * @param {Function} filt    the filter to set the view of the user object
-       * @param {Function} type    the expected type of this struct
-       * @return {Function} a function that checks all user types
+       * @param filt - the filter to set the view of the user object
+       * @param type - the expected type of this struct
        */
-      function checkType(filt, type) {
-        return forEachUsersB(filt, (uid, val) => {
+      function checkType<T extends utyp.Uent>(filt: UserFilt<T>, type):
+          () => Promise<void> {
+        return forEachUsersB<T>(filt, (uid, val) => {
           assert.strictEqual(val.uid, uid);
           assert.strictEqual(val.constructor, type);
         });
@@ -175,36 +158,35 @@ function verifyModel(db) {
 
       /**
        * Checks whether if there exists a user that fits this filter
-       * @param {Function} filt    the filter to set the view of the user object
-       * @return {Function} a function that checks existence
+       * @param filt - the filter to set the view of the user object
        */
-      function exists(filt) {
-        return async function() {
-          pms = loader.users.map(async (u) => {
-            u = new user.User(u);
+      function exists<T extends utyp.Uent>(filt: UserFilt<T>) {
+        return async function(): Promise<void> {
+          for (const uid of loader.users) {
+            const u = new user.User(uid);
             await u.reload(model);
-            u = filt(u);
-            if (u) return 1;
-            else return 0;
-          });
-          assert.notEqual(0, (await Promise.all(pms)).reduce(
-              (a, b) => a + b, 0));
+            if (filt(u)) return;
+          }
+          assert.fail('Does not exist');
         };
       }
 
       /**
        * Checks that a particular view in user has the right properties.
-       * @param {Function} it      the context to test from
-       * @param {Function} filter  the filter to modify user object
-       * @param {Object}   table   the table object to check properties against
-       * @param {Array}    should  a list of properties that SHOULD be defined
-       * @param {Array}    maybe   a list of properties that maybe is defined
+       * @param it - the context to test from
+       * @param filter - the filter to modify user object
+       * @param table - the table object to check properties against
+       * @param should - a list of properties that SHOULD be defined
+       * @param maybe - a list of properties that maybe is defined
        */
-      function checkUserProps(it, filter, table, should, maybe) {
+      function checkUserProps<T>(it: Mocha.TestFunction,
+          filter: UserFilt<T>,
+          table: Map<string|number, any>,
+          should: string[],
+          maybe: string[]): void {
         for (const prop of should) {
           it(`should have .${prop}`, forEachUsersB(filter, (uid, u) => {
             assert(prop in u, `${prop} does not exist.`);
-
             if (util.isArray(u[prop])) {
               equalsList(u[prop], table.get(uid)[prop]);
             } else {
@@ -263,13 +245,6 @@ function verifyModel(db) {
         checkUserProps(it, facFilt, db2.FACULTY, should, maybe);
       });
 
-      describe('Staff', function() {
-        const should = [];
-        const maybe = ['uid'];
-        it('should exist', exists(staffFilt));
-        checkUserProps(it, staffFilt, db2.STAFF, should, maybe);
-      });
-
       describe('Employee', function() {
         const should = ['worksAt', 'password'];
         const maybe = ['uid'];
@@ -311,7 +286,8 @@ function verifyModel(db) {
   });
 
   describe('update', function() {
-    const alters = [
+    type AlterSpec = [dtyp.Tables2, string|number, {[P: string]: any}];
+    const alters: AlterSpec[] = [
       ['Company', 'Shufflebeat', {logo: 'abcde'}],
       ['Employee', 1, {password: 'abcde'}],
       ['HelpTicket', 1, {requestor: 1}],
@@ -361,11 +337,9 @@ describe('model', async function() {
   const basic = new Database();
   describe('basic', verifyModel.bind(undefined, basic));
 
-  before(require('./danglingTest.js').before);
-
   // Only allow this for testing
   config.SQLCREDS.multipleStatements = true;
-  const sqldb = new sql.SQLDatabase(config.SQLCREDS);
+  const sqldb = new SQLDatabase(config.SQLCREDS);
   after(async () => {
     await sqldb.close();
   });
@@ -373,7 +347,5 @@ describe('model', async function() {
 
   describe('mysql', verifyModel.bind(this, sqldb));
 });
-
-describe('dangling promises', require('./danglingTest.js'));
 
 // TODO: test partial updates

@@ -1,16 +1,22 @@
-const request = require('supertest');
-const assert = require('assert');
+import * as request from 'supertest';
+import * as assert from 'assert';
+import type * as http from 'http';
+import {CookieAccessInfo as cookacc} from 'cookiejar';
 
-const config = require('../lib/config.js');
+import type msg from '../lib/msg';
+import type * as utyp from '../lib/model/usertypes';
+import config from '../lib/config';
+import initServer from '../lib/server';
+
 config.TESTING = true;
 config.IFACE = {
   host: 'localhost',
   port: 1337,
 };
-const util = require('../lib/util.js');
+import * as util from '../lib/util';
 
 // Since all our requests are synchronous!
-util.Reentrant.prototype.tryLock = function() {
+util.Reentrant.prototype.tryLock = async function(): Promise<boolean> {
   if (this.locked) {
     throw new Error('Deadlock warning!');
   } else {
@@ -30,7 +36,7 @@ const eKrystal = 'kfurlow5@china.com.cn';
 const eBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
 
-uspecs = {
+const uspecs = {
   [eBrown]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'faculty'},
   [eDowley]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
   [eStennes]: {isAdmin: false, isUtd: true, isEmployee: false, uType: 'staff'},
@@ -43,13 +49,11 @@ uspecs = {
 };
 
 describe('server', function() {
-  let server;
-  let agent;
-
-  before(require('./danglingTest.js').before);
+  let server: http.Server;
+  let agent: request.SuperTest<request.Test>;
 
   before(async function() {
-    server = await require('../lib/server.js')();
+    server = await initServer();
   });
 
   after(function() {
@@ -60,26 +64,35 @@ describe('server', function() {
     agent = request.agent(server);
   });
 
+  type JsonBoundFn = (url: string, data?: any) => Promise<msg>;
+
+  type JsonFn = ((mth: string, url: string, data?: any) => Promise<msg>) & {
+    get?: JsonBoundFn;
+    post?: JsonBoundFn;
+    put?: JsonBoundFn;
+    delete?: JsonBoundFn;
+  };
+
   /**
    * Makes a JSON ajax request, expecting a JSON response.
-   * @param {String} method    the method name
-   * @param {String} url       the URL of the request
-   * @param {Object} data      the data to send if any
-   * @return {Object} the response data
+   * @param method - the method name
+   * @param url - the URL of the request
+   * @param data - the data to send if any
    */
-  async function json(method, url, data) {
+  const json: JsonFn = async (method: string, url: string, data?: any):
+      Promise<msg> => {
     let req = agent[method.toLowerCase()](url)
         .set('accept', 'json');
     if (data) req = req.type('json').send(data);
     const resp = await req.expect(200);
     return resp.body;
-  }
+  };
 
   /**
    * Authenticates with a email using /testlogin endpoint
-   * @param {String} email     the email
+   * @param email - the email
    */
-  async function doLogin(email) {
+  async function doLogin(email: string): Promise<void> {
     const r1 = await json.post('/api/v1/testlogin', {email});
     assert(r1.success);
   }
@@ -93,13 +106,12 @@ describe('server', function() {
    * Extracts the credential information from the user info, identifying at a
    * glance what type of user this is.
    *
-   * @param {Object} user     the normalized user object
-   * @return {Object} the extracted credential information
+   * @param user - the normalized user object
    */
-  function getCredsFromUser(user) {
+  function getCredsFromUser(user): utyp.UTDPersonnel & utyp.User {
     return util.copyAttribs({}, user, {
       isAdmin: false, isEmployee: null, isUtd: null, uType: null,
-    });
+    }) as utyp.UTDPersonnel & utyp.User;
   }
 
   describe('test users', function() {
@@ -119,12 +131,12 @@ describe('server', function() {
         email: 'bademail@gmail.com',
       });
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'nouser');
+      assert.strictEqual(r1.debug, 'nouser');
     });
     it('by default you\'re not authenticated.', async function() {
       const resp = await json.get('/api/v1/checksess');
       assert(!resp.success);
-      assert.strictEqual(resp.body.debug, 'nologin');
+      assert.strictEqual(resp.debug, 'nologin');
     });
 
     it('authenticated after login, includes information', async function() {
@@ -148,9 +160,9 @@ describe('server', function() {
       const r1 = await json.post('/api/v1/login', {
         email: eStennes,
         password: eBrownPass});
-      assert.strictEqual(agent.jar.getCookies().length, 0);
+      assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'notemployee');
+      assert.strictEqual(r1.debug, 'notemployee');
     });
 
     it('logout should no longer have session', async function() {
@@ -161,34 +173,34 @@ describe('server', function() {
       assert(r2.success);
       const r3 = await json.get('/api/v1/checksess');
       assert(!r3.success);
-      assert.strictEqual(r3.body.debug, 'nologin');
+      assert.strictEqual(r3.debug, 'nologin');
     });
 
     it('should not auth with invalid email', async function() {
       const r1 = await json.post('/api/v1/login', {
         email: 'bademail@gmail.com',
         password: eBrownPass});
-      assert.strictEqual(agent.jar.getCookies().length, 0);
+      assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'nouser');
+      assert.strictEqual(r1.debug, 'nouser');
     });
 
     it('should not auth with invalid password', async function() {
       const r1 = await json.post('/api/v1/login', {
         email: eBrown,
         password: 'badpass'});
-      assert.strictEqual(agent.jar.getCookies().length, 0);
+      assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'badpassword');
+      assert.strictEqual(r1.debug, 'badpassword');
     });
 
     it('should not login with invalid email', async function() {
       const r1 = await json.post('/api/v1/utdlogin', {
         email: 'bademail@gmail.com',
       });
-      assert.strictEqual(agent.jar.getCookies().length, 0);
+      assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
-      assert.strictEqual(r1.body.debug, 'nouser');
+      assert.strictEqual(r1.debug, 'nouser');
     });
 
     it('should authenticate utd with correct email', async function() {
@@ -207,7 +219,7 @@ describe('server', function() {
       it('should deny access without login', async function() {
         const r1 = await json.get('/api/v1/team');
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'nologin');
+        assert.strictEqual(r1.debug, 'nologin');
       });
       it('tbrown has no teams', async function() {
         await doLogin(eBrown);
@@ -288,7 +300,7 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 4, 12]});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notteamleader');
+        assert.strictEqual(r1.debug, 'notteamleader');
       });
       it('should not allow changing team name to ' +
           'already existing team name', async function() {
@@ -296,27 +308,27 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/team',
             {name: 'Group 38'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badteamname');
+        assert.strictEqual(r1.debug, 'badteamname');
       });
       it('should not make non-member leader', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team', {leader: 9});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notinteam');
+        assert.strictEqual(r1.debug, 'notinteam');
       });
       it('should not duplicate project choices', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 8, 12]});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'duplicatechoice');
+        assert.strictEqual(r1.debug, 'duplicatechoice');
       });
       it('should not have invalid project', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 12, 55]});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badproj');
+        assert.strictEqual(r1.debug, 'badproj');
       });
       it('should successfully change password ', async function() {
         await doLogin(eDowley);
@@ -334,21 +346,21 @@ describe('server', function() {
         const r1 = await json.delete('/api/v1/team/member',
             [0]);
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notteamleader');
+        assert.strictEqual(r1.debug, 'notteamleader');
       });
       it('should not allow leader to remove self', async function() {
         await doLogin(eDowley);
         const r1 = await json.delete('/api/v1/team/member',
             [0]);
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'teamremoveself');
+        assert.strictEqual(r1.debug, 'teamremoveself');
       });
       it('should not allow leader to remove non-member', async function() {
         await doLogin(eDowley);
         const r1 = await json.delete('/api/v1/team/member',
             [4]);
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notinteam');
+        assert.strictEqual(r1.debug, 'notinteam');
       });
       it('should allow leader to remove member', async function() {
         await doLogin(eDowley);
@@ -365,7 +377,7 @@ describe('server', function() {
       it('should deny access without login', async function() {
         const r1 = await json.get('/api/v1/team/list');
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'nologin');
+        assert.strictEqual(r1.debug, 'nologin');
       });
       it('stennes (staff) can list all teams', async function() {
         await doLogin(eStennes);
@@ -395,35 +407,35 @@ describe('server', function() {
         const r1 = await json.post('/api/v1/team/join', {team: 40,
           password: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'alreadyjoin');
+        assert.strictEqual(r1.debug, 'alreadyjoin');
       });
       it('should return no such team exists', async function() {
         await doLogin(eDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 51,
           password: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badteam');
+        assert.strictEqual(r1.debug, 'badteam');
       });
       it('should return team is full', async function() {
         await doLogin(eDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 39,
           password: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'teamfull');
+        assert.strictEqual(r1.debug, 'teamfull');
       });
       it('should return team requires a password', async function() {
         await doLogin(eDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 1,
           password: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'noteampass');
+        assert.strictEqual(r1.debug, 'noteampass');
       });
       it('should return invalid password', async function() {
         await doLogin(eDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 1,
           password: 'null'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badteampass');
+        assert.strictEqual(r1.debug, 'badteampass');
       });
       it('should return successfully joined team w/o ' +
           'password', async function() {
@@ -446,7 +458,7 @@ describe('server', function() {
         await doLogin(eDowley);
         const r1 = await json.post('/api/v1/team/leave');
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'teamleader');
+        assert.strictEqual(r1.debug, 'teamleader');
       });
       it('should allow student to leave group', async function() {
         await doLogin(eCattermoul);
@@ -485,7 +497,7 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/project',
             {projID: 51, pName: 'NewName'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badproj');
+        assert.strictEqual(r1.debug, 'badproj');
       });
       it('should not allow modification of project ' +
           'w/o permissions', async function() {
@@ -493,14 +505,14 @@ describe('server', function() {
         const r1 = await json.put('/api/v1/project',
             {projID: 1, pName: 'NewName'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'nopermproj');
+        assert.strictEqual(r1.debug, 'nopermproj');
       });
       it('project cannot be modified', async function() {
         await doLogin(eDowley);
         const r1 = await json.put('/api/v1/project',
             {projID: 2, pName: 'NewName'});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'badstatus');
+        assert.strictEqual(r1.debug, 'badstatus');
       });
 
       // TODO: Create Project w/ modifiable status
@@ -512,12 +524,13 @@ describe('server', function() {
             {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
               image: null, projDoc: null});
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notemployee');
+        assert.strictEqual(r1.debug, 'notemployee');
       });
       it('should successfully add project', async function() {
         await doLogin(eKrystal);
-        proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
-          image: null, projDoc: null};
+        const proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
+          image: null, projDoc: null, visible: true, skillsReq: [],
+          advisor: null, status: 'phony', company: 'phony2', projID: null};
         const r1 = await json.post('/api/v1/project/submit', proj);
         assert(r1.success);
 
@@ -564,10 +577,8 @@ describe('server', function() {
         await doLogin(eDowley);
         const r1 = await json.get('/api/v1/admin/nonexistent');
         assert(!r1.success);
-        assert.strictEqual(r1.body.debug, 'notadmin');
+        assert.strictEqual(r1.debug, 'notadmin');
       });
     });
   });
 });
-
-describe('dangling promises', require('./danglingTest.js'));
