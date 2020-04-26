@@ -64,7 +64,7 @@ for (const [entName, [[pkey, ptyp], spec]] of Object.entries(adminEnts)) {
   r.post(`/admin/${entName}`, ct(ct.obj(spec)));
   r.put(`/admin/${entName}`, ct(ct.maybeDefinedObjExcept(spec2, pkey)));
   r.post(`/admin/${entName}/list`, ct(ct.array(ptyp)));
-  r.delete(`/admin/${entName}/list`, ct(ct.array(ct.int)));
+  r.delete(`/admin/${entName}/list`, ct(ct.array(ptyp)));
 }
 
 r.post('/admin/bulk/clearTeams', ct(ct.obj({
