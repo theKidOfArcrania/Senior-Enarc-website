@@ -2,6 +2,7 @@ import * as express from 'express';
 
 import * as ent from '../model/enttypes';
 import ct from '../chktype';
+import {FnChk} from '../chktype';
 
 const r = express.Router();
 
@@ -14,29 +15,27 @@ r.post('/utdlogin', ct(ct.obj({'email': ct.string(50)})));
 
 r.post('/testlogin', ct(ct.obj({'email': ct.string(50)})));
 
-r.post('/admin/:entity/list', ct(ct.array(ct.int)));
-r.delete('/admin/:entity/list', ct(ct.array(ct.int)));
 
 // Contains a key-value pair of the entity name -> tuple of the primary key
 // types and the other field types
-const adminEnts = {
-  company: [{name: ct.string(50)}, {
+const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
+  company: [['name', ct.string(50)], {
     logo: ct.file,
     manager: ct.int,
   }],
-  helpticket: [{hid: ct.int}, {
+  helpticket: [['hid', ct.int], {
     hStatus: ct.enumT(ent.ticketStatuses),
     hDescription: ct.string(100),
     requestor: ct.int,
   }],
-  invite: [{inviteID: ct.int}, {
+  invite: [['inviteID', ct.int], {
     expiration: ct.int,
     company: ct.maybeNull(ct.string(50)),
     managerFname: ct.maybeNull(ct.string(50)),
     managerLname: ct.maybeNull(ct.string(50)),
     managerEmail: ct.maybeNull(ct.string(100)),
   }],
-  project: [{projID: ct.int}, {
+  project: [['projID', ct.int], {
     pName: ct.string(50),
     image: ct.file,
     projDoc: ct.file,
@@ -48,7 +47,7 @@ const adminEnts = {
     advisor: ct.int,
     visible: ct.bool,
   }],
-  team: [{tid: ct.int}, {
+  team: [['tid', ct.int], {
     assignedProj: ct.int,
     budget: ct.number,
     leader: ct.int,
@@ -60,11 +59,12 @@ const adminEnts = {
   }],
 };
 
-for (const [entName, [pkey, spec]] of Object.entries(adminEnts)) {
-  const spec2 = {...spec, ...pkey};
+for (const [entName, [[pkey, ptyp], spec]] of Object.entries(adminEnts)) {
+  const spec2 = {...spec, [pkey]: ptyp};
   r.post(`/admin/${entName}`, ct(ct.obj(spec)));
-  r.put(`/admin/${entName}`, ct(ct.maybeDefinedObjExcept({
-    ...spec2, ...pkey}, Object.keys(pkey)[0])));
+  r.put(`/admin/${entName}`, ct(ct.maybeDefinedObjExcept(spec2, pkey)));
+  r.post(`/admin/${entName}/list`, ct(ct.array(ptyp)));
+  r.delete(`/admin/${entName}/list`, ct(ct.array(ct.int)));
 }
 
 r.post('/admin/bulk/clearTeams', ct(ct.obj({
