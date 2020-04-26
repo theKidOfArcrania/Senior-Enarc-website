@@ -4,9 +4,9 @@ import config from '../lib/config';
 config.TESTING = true;
 
 import * as user from '../lib/model/user';
-import Database from '../lib/model/db.js';
-import SQLDatabase from '../lib/model/sqldb.js';
-import * as util from '../lib/util.js';
+import Database from '../lib/model/db';
+import SQLDatabase from '../lib/model/sqldb';
+import * as util from '../lib/util';
 
 import * as dtyp from '../lib/model/dbtypes';
 import * as utyp from '../lib/model/usertypes';

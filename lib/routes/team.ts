@@ -107,7 +107,7 @@ async function loadTeam<DB>(tr: DBTrans<DB>, u: User, onlyTeam: boolean,
   if (isNull(t)) return null;
 
   const access = await teamRestrictionLevel(u, t);
-  if (access === null) return null;
+  if (access === Access.NONE) return null;
 
   if (onlyTeam) {
     members = [];
@@ -118,7 +118,7 @@ async function loadTeam<DB>(tr: DBTrans<DB>, u: User, onlyTeam: boolean,
   }
 
   let tret;
-  if (access) {
+  if (access === Access.FULL) {
     // Full access
     tret = t;
     tret.members = members.map((m) => {
@@ -189,10 +189,8 @@ r.post('/team/join', auth.login, auth.student, asyncHan(async (req, res) => {
   let m = msg.fail('An unknown error occurred!', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
     const {team: tid, password} = req.bodySan;
-    let team;
-    try {
-      team = await tr.loadTeamInfo(tid);
-    } catch (e) {
+    const team = await tr.loadTeamInfo(tid);
+    if (isNull(team)) {
       m = msg.fail('That team does not exist', 'badteam');
       return false;
     }
@@ -203,7 +201,7 @@ r.post('/team/join', auth.login, auth.student, asyncHan(async (req, res) => {
       return false;
     }
 
-    if (team.password !== null) {
+    if (!isNull(team.password)) {
       if (!password) {
         m = msg.fail('This team requires a password', 'noteampass');
         return false;
@@ -255,17 +253,17 @@ r.put('/team', auth.student, asyncHan(async (req, res) => {
     }
 
     if (choices) {
-      const used = new Set(choices);
+      const used = new Set<number>(choices);
       if (used.size !== choices.length) {
         m = msg.fail('Duplicate project choices!', 'duplicatechoice');
         return false;
       }
 
-      try {
-        await Promise.all(choices.map(tr.loadProjectInfo.bind(tr)));
-      } catch (e) {
-        m = msg.fail('Invalid project choice', 'badproj');
-        return false;
+      for (const pid of used) {
+        if (isNull(await tr.loadProjectInfo(pid))) {
+          m = msg.fail('Invalid project choice', 'badproj');
+          return false;
+        }
       }
     }
 
@@ -322,7 +320,7 @@ r.post('/team/leave', auth.student, asyncHan(async (req, res) => {
   const s = req.student;
   let m = msg.fail('An unknown error occurred!', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
-    const loading = await checkLoadTeam(tr, s.memberOf, s.uid);
+    const loading = await checkLoadTeam(tr, s.memberOf, null);
     if (!util.isSuccess(loading)) {
       m = loading[1];
       return false;
@@ -357,7 +355,7 @@ r.get('/team/list', auth.login, asyncHan(async (req, res) => {
   await getInst().doRTransaction(async (tr) => {
     const teams: number[] = [];
     for (const tid of await tr.findAllTeams()) {
-      if (isNull(loadTeam(tr, u, true, tid))) continue;
+      if (isNull(await loadTeam(tr, u, true, tid))) continue;
       teams.push(tid);
     }
     res.json(msg.success('Success', teams));

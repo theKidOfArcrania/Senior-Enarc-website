@@ -494,13 +494,7 @@ export abstract class DatabaseTransaction<DB> {
     for (;;) {
       const id = crypto.randomBytes(4).readInt32LE();
       if (id <= 0) continue;
-
-      try {
-        await this['load' + table + 'Info'](id);
-      } catch (e) {
-        if (!e.dberror) throw e;
-        return id;
-      }
+      if (isNull(await this['load' + table + 'Info'](id))) return id;
     }
   }
 
@@ -852,7 +846,7 @@ export abstract class DatabaseTransaction<DB> {
     await this.checkValid();
     const val = await this._loadEntity(pid, 'PROJECT') as Some<ent.Project>;
     if (isNull(val)) return null;
-    if (!val.skillsReq) val.skillsReq = [];
+    val.skillsReq = await this.getSkillsReq(pid);
     val.visible = !!val.visible;
     return val;
   }
@@ -884,7 +878,10 @@ export abstract class DatabaseTransaction<DB> {
    */
   async loadStudentInfo(uid: number): Promise<Some<ent.Student>> {
     await this.checkValid();
-    return this._loadEntity(uid, 'STUDENT') as Promise<Some<ent.Student>>;
+    const val = await this._loadEntity(uid, 'STUDENT') as Some<ent.Student>;
+    if (isNull(val)) return null;
+    val.skills = await this.getSkills(uid);
+    return val;
   }
 
   /**

@@ -87,9 +87,9 @@ r.post('/utdlogin', asyncHan(async (req, res): Promise<void> => {
   res.json(msg.success('You have successfully logged in!'));
 }));
 
-r.post('/logout', async (req, res) => {
-  await util.promisify(req.session.destroy);
+r.post('/logout', asyncHan(async (req, res) => {
+  await util.promisify(req.session.destroy.bind(req.session))();
   res.json(msg.success('You have been logged out!'));
-});
+}));
 
 module.exports = r;

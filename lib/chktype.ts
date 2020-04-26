@@ -55,7 +55,7 @@ function CheckRoute(typeCheck: FnChk) {
     } catch (e) {
       res.json(msg.fail('Invalid request format!', 'badformat'));
       // Uncomment to debug
-      // console.error(e);
+      console.error(e);
       return;
     }
 

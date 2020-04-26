@@ -156,7 +156,7 @@ admin.post('/bulk/clearTeams', asyncHan(async (req, res) => {
   const {limit, teams} = req.bodySan;
   const success = await getInst().doTransaction(async (tr) => {
     // Delete all teams
-    tr.deleteTeam(null);
+    await tr.deleteTeam(null);
 
     // Add new teams
     for (const i of util.range(teams)) {

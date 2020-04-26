@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
-import * as util from '../../lib/util.js';
+import * as util from '../../lib/util';
 import type * as tents from '../../lib/model/enttypes';
 import type * as typ from '../../lib/model/dbtypes';
 

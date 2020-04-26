@@ -1,4 +1,4 @@
-import {copyAttribs, range, Reentrant, deepJSONCopy, Some} from '../util.js';
+import {copyAttribs, range, Reentrant, deepJSONCopy, Some} from '../util';
 
 import * as typ from './dbtypes';
 
@@ -253,7 +253,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * @param suid - the student ID
    */
   async getSkills(suid: number): Promise<string[]> {
-    return this._db.STUDENT[suid].skills;
+    return this._db.STUDENT[suid].skills || [];
   }
 
   /**
@@ -261,7 +261,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * @param pid - the project ID
    */
   async getSkillsReq(pid: number): Promise<string[]> {
-    return this._db.PROJECT[pid].skillsReq;
+    return this._db.PROJECT[pid].skillsReq || [];
   }
 
   /* ************************************

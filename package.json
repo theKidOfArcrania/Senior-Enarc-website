@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "output/lib/server.js",
-  "type": "module",
   "scripts": {
     "prebuild": "bash ./check.sh",
     "build": "tsc",
@@ -11,12 +10,12 @@
     "lint": "eslint lib test --ext .js,.ts",
     "premysql": "npm run build",
     "mysql": "node lib/sqlcli.js",
-    "pretest": "npm run build",
-    "test": "mocha output/test",
-    "pretest-coverage": "npm run build",
-    "test-coverage": "nyc mocha output/test",
-    "pretest-codecov": "npm run build",
-    "test-codecov": "nyc --reporter=lcov mocha output/test",
+    "pretest": "npm run lint",
+    "test": "mocha",
+    "pretest-coverage": "npm run lint",
+    "test-coverage": "nyc mocha",
+    "pretest-codecov": "npm run lint",
+    "test-codecov": "nyc --reporter=lcov mocha",
     "posttest-codecov": "codecov",
     "prestart": "npm run build",
     "start": "node output/lib/server.js",
@@ -71,7 +70,11 @@
     "nyc": "^15.0.1",
     "superagent-prefix": "0.0.2",
     "supertest": "^4.0.2",
+    "ts-node": "^8.9.0",
     "typescript": "^3.8.3",
     "why-is-node-running": "^2.1.2"
+  },
+  "engines": {
+    "node": ">=12.0.0"
   }
 }

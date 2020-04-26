@@ -173,11 +173,8 @@ r.put('/project', auth.login, auth.employee, asyncHan(async (req, res) => {
   const e = req.employee;
   let m = msg.fail('Unable to add the project.', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
-    let proj;
-    try {
-      proj = await tr.loadProjectInfo(req.bodySan.projID);
-    } catch (e) {
-      if (!e.dberror) throw e;
+    const proj = await tr.loadProjectInfo(req.bodySan.projID);
+    if (isNull(proj)) {
       m = msg.fail('Project does not exist', 'badproj');
       return false;
     }
@@ -231,7 +228,7 @@ r.get('/project/list', auth.login, asyncHan(async (req, res) => {
   await getInst().doRTransaction(async (tr) => {
     const projs: number[] = [];
     for (const pid of await tr.findAllProjects()) {
-      if (isNull(loadProject(tr, u, pid))) continue;
+      if (isNull(await loadProject(tr, u, pid))) continue;
       projs.push(pid);
     }
     res.json(msg.success('Success', projs));

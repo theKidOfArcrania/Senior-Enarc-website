@@ -4,15 +4,17 @@ import type * as http from 'http';
 import {CookieAccessInfo as cookacc} from 'cookiejar';
 
 import type msg from '../lib/msg';
+import * as ent from '../lib/model/enttypes';
 import type * as utyp from '../lib/model/usertypes';
 import config from '../lib/config';
-import initServer from '../lib/server';
 
 config.TESTING = true;
 config.IFACE = {
   host: 'localhost',
   port: 1337,
 };
+import initServer from '../lib/server';
+
 import * as util from '../lib/util';
 
 // Since all our requests are synchronous!
@@ -528,9 +530,9 @@ describe('server', function() {
       });
       it('should successfully add project', async function() {
         await doLogin(eKrystal);
-        const proj = {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
-          image: null, projDoc: null, visible: true, skillsReq: [],
-          advisor: null, status: 'phony', company: 'phony2', projID: null};
+        const proj: Partial<ent.Project> = {
+          pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
+          image: null, projDoc: null};
         const r1 = await json.post('/api/v1/project/submit', proj);
         assert(r1.success);
 
@@ -550,7 +552,7 @@ describe('server', function() {
         proj.visible = false;
         proj.skillsReq = [];
         proj.advisor = null;
-        proj.status = 'submitted';
+        proj.status = ent.ProjectStatus.SUBMITTED;
         proj.company = 'Kwinu';
         proj.projID = added;
         assert.deepStrictEqual(actual, proj);

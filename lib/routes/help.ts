@@ -30,10 +30,8 @@ r.post('/help', auth.login, asyncHan(async (req, res) => {
 r.put('/help', auth.login, asyncHan(async (req, res) => {
   let m = msg.fail('An unknown error occurred!', 'internal');
   const success = getInst().doTransaction(async (tr) => {
-    let h;
-    try {
-      h = await tr.loadHelpTicketInfo(req.bodySan.hid);
-    } catch (e) {
+    const h = await tr.loadHelpTicketInfo(req.bodySan.hid);
+    if (isNull(h)) {
       m = msg.fail('Invalid help ticket', 'badticket');
       return false;
     }

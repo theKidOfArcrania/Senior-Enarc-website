@@ -5,14 +5,17 @@ import {promises as fs} from 'fs';
 import * as session from 'express-session';
 import type * as http from 'http';
 
-const FileStore = require('session-file-store').session;
+
+import * as filestore from 'session-file-store';
+const FileStore = filestore(session);
 
 import msg from './msg';
 import config from './config';
 import * as util from './util';
 import * as user from './model/user';
+import loadIntoDB from '../test/data/loader';
 
-import MemDatabase, {getInst, setInst} from './model/db.js';
+import MemDatabase, {getInst, setInst} from './model/db';
 
 /**
  * Initializes the server;
@@ -24,7 +27,7 @@ export default async function initServer(): Promise<http.Server> {
   // Use dummy storage data for right now
   setInst(new MemDatabase());
   await getInst().doTransaction(async (tr) => {
-    await require('../test/data/loader.js').loadIntoDB(tr);
+    await loadIntoDB(tr);
     return true;
   });
 
@@ -72,12 +75,12 @@ export default async function initServer(): Promise<http.Server> {
   apis.use('/upload', require('express-fileupload')(config.UPLOAD));
 
   // Insert routes here
-  apis.use(require('./routes/sanity.js')); // Do sanity type-checks first
-  apis.use(require('./routes/upload.js'));
-  apis.use(require('./routes/admin.js'));
-  apis.use(require('./routes/login.js'));
-  apis.use(require('./routes/team.js'));
-  apis.use(require('./routes/project.js'));
+  apis.use(require('./routes/sanity')); // Do sanity type-checks first
+  apis.use(require('./routes/upload'));
+  apis.use(require('./routes/admin'));
+  apis.use(require('./routes/login'));
+  apis.use(require('./routes/team'));
+  apis.use(require('./routes/project'));
   /* eslint-enable */
 
   app.use((err, req, res, next) => {

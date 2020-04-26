@@ -3,12 +3,12 @@ import * as os from 'os';
 import * as readline from 'readline';
 import * as Table from 'cli-table3';
 
-import config from './config.js';
+import config from './config';
 config.TESTING = true;
 
-import SQLDatabase from './model/sqldb.js';
+import SQLDatabase from './model/sqldb';
 
-import loadIntoDB from '../test/data/loader.js';
+import loadIntoDB from '../test/data/loader';
 
 
 const rl = readline.createInterface({
@@ -124,4 +124,4 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+main(); // eslint-disable-line @typescript-eslint/no-floating-promises
