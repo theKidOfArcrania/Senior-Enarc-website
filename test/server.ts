@@ -1,3 +1,5 @@
+/* eslint-disable no-invalid-this */
+
 import * as request from 'supertest';
 import * as assert from 'assert';
 import type * as http from 'http';
@@ -55,6 +57,7 @@ describe('server', function() {
   let agent: request.SuperTest<request.Test>;
 
   before(async function() {
+    this.timeout(10000);
     server = await initServer();
   });
 
