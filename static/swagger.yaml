@@ -21,7 +21,7 @@ tags:
 - name: "team"
   description: "working in your project teams"
 - name: "admin"
-  description: "admin control panel to tweak all the information"
+  description: "admin control panel to tweak all the information (requires admin account)"
 schemes:
 - "https"
 - "http"
@@ -69,9 +69,11 @@ paths:
             - type: object
               properties:
                 body:
-                  name:
-                    type: string
-                    example: "169566910544605184db239e4409ef4bd0"
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: "169566910544605184db239e4409ef4bd0"
   /checksess:
     get:
       tags:
@@ -189,7 +191,7 @@ paths:
             - type: "object"
               properties:
                 body: 
-                  $ref: "#/definitions/Project"
+                  $ref: "#/definitions/Project2"
     post:
       tags:
       - "project"
@@ -218,7 +220,7 @@ paths:
                 body: 
                   type: "object"
                   additionalProperties:
-                    $ref: "#/definitions/Project"
+                    $ref: "#/definitions/Project2"
     put:
       tags:
       - "project"
@@ -363,7 +365,7 @@ paths:
             - type: "object"
               properties:
                 body: 
-                  $ref: "#/definitions/Project"
+                  $ref: "#/definitions/Team2"
     post:
       tags:
       - "team"
@@ -392,7 +394,7 @@ paths:
                 body: 
                   type: "object"
                   additionalProperties:
-                    $ref: "#/definitions/Team"
+                    $ref: "#/definitions/Team2"
     put:
       tags:
       - "team"
@@ -544,6 +546,708 @@ paths:
                   items: 
                     type: integer
                   example: [0,1,2,3]
+  /admin/bulk/clearTeams:
+    post:
+      summary: Clear all teams and create a new set of them
+      description: You can set a number of teams to create and a default student limit per team
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: object
+          properties:
+            limit: 
+              type: integer
+            teams:
+              type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/bulk/removeStudents:
+    post:
+      summary: Purges all information about all the students
+      description: This will purge all information about all the students, do it only at the end of each semester, when needing to get ready for the next semester.
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/bulk/archiveProjects:
+    post:
+      summary: Archive all projects
+      description: This sets the status of all active projects into the archive state. This is also a bulk tool for end of semester, to clean up for next year.
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/company:
+    get:
+      summary: Get a company
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/Company"
+    post:
+      summary: Add a company
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/CompanyNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a company
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/Company"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/company/list:
+    get:
+      summary: Get all the companies
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: string
+    post:
+      summary: Get info on a list of companies
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/Company"
+    delete:
+      summary: Delete some companies
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: string
+  /admin/helpticket:
+    get:
+      summary: Get a help ticket information
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/HelpTicket"
+    post:
+      summary: Create a help ticket
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/HelpTicketNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a help ticket
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/HelpTicket"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/helpticket/list:
+    get:
+      summary: Get all the help tickets
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a set of help tickets
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/HelpTicket"
+    delete:
+      summary: Delete some help tickets
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+  /admin/invite:
+    get:
+      summary: Get an invite info
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/Invite"
+    post:
+      summary: Create an invite link
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/InviteNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify an invite link
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/Invite"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/invite/list:
+    get:
+      summary: Get a list of all invite links
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get information on a set of invite links
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/Invite"
+    delete:
+      summary: Delete some invite links
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+  /admin/project:
+    get:
+      summary: Get info on a project
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/Project"
+    post:
+      summary: Create a project
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/ProjectNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a project
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/Project"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/project/list:
+    get:
+      summary: Get all projects
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a set of projects
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/Project"
+    delete:
+      summary: Delete some projects
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+  /admin/team:
+    get:
+      summary: Get info on a team
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/Team"
+    post:
+      summary: Create a team
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/TeamNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a team
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/Team"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/team/list:
+    get:
+      summary: Get all the teams
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a set of teams
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/Team"
+    delete:
+      summary: Delete some teams
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+
 securityDefinitions:
   petstore_auth:
     type: "oauth2"
@@ -602,11 +1306,16 @@ definitions:
           type: string
           maxLength: 100
   Company:
+    allOf:
+    - type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50
+    - $ref: "#/definitions/CompanyNew"
+  CompanyNew:
     type: object
     properties:
-      name:
-        type: string
-        maxLength: 50
       logo:
         type: string
         maxLength: 100
@@ -660,10 +1369,15 @@ definitions:
             type: string
             maxLength: 50
   Project:
+    allOf:
+    - type: object
+      properties:
+        projID:
+          type: integer
+    - $ref: '#/definitions/ProjectNew'
+  ProjectNew:
     type: object
     properties:
-      projID:
-        type: integer
       pName:
         type: string
         maxLength: 50
@@ -680,16 +1394,11 @@ definitions:
         type: string
         maxLength: 1000
       mentor:
-        $ref: '#/definitions/Employee'
+        type: integer
       sponsor:
-        $ref: '#/definitions/Employee'
+        type: integer
       advisor:
-        $ref: '#/definitions/Faculty'
-      skillsReq:
-        type: array
-        items:
-          type: string
-          maxLength: 50
+        type: integer
       status:
         type: string
         default: submitted
@@ -699,13 +1408,34 @@ definitions:
         - accepted
         - rejected
         - archived
+      skillsReq:
+        type: array
+        items:
+          type: string
+          maxLength: 50
       visible:
         type: boolean
+  Project2:
+    allOf: 
+    - $ref: '#/definitions/Project'
+    - type: object
+      properties:
+        mentor:
+          $ref: '#/definitions/Employee'
+        sponsor:
+          $ref: '#/definitions/Employee'
+        advisor:
+          $ref: '#/definitions/Faculty'
   Team:
+    allOf:
+    - type: object
+      properties:
+        tid:
+          type: integer
+    - $ref: '#/definitions/TeamNew'
+  TeamNew:
     type: object
     properties:
-      tid:
-        type: integer
       name:
         type: string
         maxLength: 50
@@ -717,10 +1447,6 @@ definitions:
         type: integer
       membLimit:
         type: integer
-      members:
-        type: array
-        items: 
-          $ref: '#/definitions/Student'
       password:
         type: string
         maxLength: 100
@@ -733,11 +1459,26 @@ definitions:
           type: integer
         maxLength: 6
         minLength: 6
+  Team2:
+    allOf: 
+    - $ref: '#/definitions/Team'
+    - type: object
+      properties:
+        members:
+          type: array
+          items: 
+            $ref: '#/definitions/Student'
+  
   HelpTicket:
+    allOf:
+    - type: object
+      properties:
+        hid:
+          type: integer
+    - $ref: '#/definitions/HelpTicketNew'
+  HelpTicketNew:
     type: object
     properties:
-      hid:
-        type: integer
       hStatus:
         type: string 
         default: open
@@ -751,10 +1492,15 @@ definitions:
       requestor:
         type: integer
   Invite:
+    allOf:
+    - type: object
+      properties:
+        inviteID:
+          type: integer
+    - $ref: '#/definitions/InviteNew'
+  InviteNew:
     type: object
     properties:
-      inviteID:
-        type: integer
       expiration:
         type: string
         format: date
@@ -770,8 +1516,6 @@ definitions:
       managerEmail:
         type: string
         maxLength: 100
-
-
 
 externalDocs:
   description: "Find out more about Swagger"
