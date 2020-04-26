@@ -1,35 +1,38 @@
-const express = require('express');
-const asyncHan = require('express-async-handler');
+import * as express from 'express';
+import {asyncHan} from '../util';
 
-const config = require('../config.js');
-const {getInst} = require('../model/db.js');
-const user = require('../model/user.js');
-const util = require('../util.js');
-const msg = require('../msg.js');
+import config from '../config';
+import {getInst} from '../model/db';
+import msg from '../msg';
+import * as auth from './auth';
+import {Some, isNull} from '../util';
+import * as util from '../util';
+import {User} from '../model/user';
 
-const r = new express.Router();
+const r = express.Router();
 
 // Check whether if a user is logged in at this point
-r.get('/checksess', util.login, asyncHan(async (req, res) => {
+r.get('/checksess', auth.login, asyncHan(async (req, res): Promise<void> => {
   const user = req.user;
   res.json(msg.success('You are logged in!', user.normalize()));
 }));
 
 // Sponsor login
-r.post('/login', asyncHan(async (req, res) => {
+r.post('/login', asyncHan(async (req, res): Promise<void> => {
   const data = req.bodySan;
 
   // Lookup user's email credentials
-  const ret = await getInst().doRTransaction(async (tr) => {
+  const ret = await getInst().doRTransaction(async (tr):
+      Promise<[User, number]|false> => {
     const uid = await tr.searchUserByEmail(data.email);
-    if (uid === null) {
+    if (isNull(uid)) {
       res.json(msg.fail('Invalid email or password!', 'nouser'));
       util.log(data.email + ': User not found');
-      return;
+      return false;
     }
 
     // Load user
-    const u = new user.User(uid);
+    const u = new User(uid);
     await u.reload(tr);
     return [u, uid];
   }, 100);
@@ -55,10 +58,10 @@ r.post('/login', asyncHan(async (req, res) => {
 
 // Test login
 if (config.TESTING) {
-  r.post('/testlogin', asyncHan(async (req, res) => {
-    const uid = await getInst().doRTransaction((tr) =>
+  r.post('/testlogin', asyncHan(async (req, res): Promise<void> => {
+    const uid = await getInst().doRTransaction((tr): Promise<Some<number>> =>
       tr.searchUserByEmail(req.bodySan.email), 100);
-    if (uid === null) {
+    if (isNull(uid)) {
       res.json(msg.fail('Invalid username or password!', 'nouser'));
       return;
     }
@@ -69,7 +72,7 @@ if (config.TESTING) {
 }
 
 // UTD login
-r.post('/utdlogin', asyncHan(async (req, res) => {
+r.post('/utdlogin', asyncHan(async (req, res): Promise<void> => {
   // TODO: SSO login
   // For now just give me a email and i'll give you a user.
 
@@ -84,9 +87,9 @@ r.post('/utdlogin', asyncHan(async (req, res) => {
   res.json(msg.success('You have successfully logged in!'));
 }));
 
-r.post('/logout', (req, res) => {
-  req.session.destroy();
+r.post('/logout', asyncHan(async (req, res) => {
+  await util.promisify(req.session.destroy.bind(req.session))();
   res.json(msg.success('You have been logged out!'));
-});
+}));
 
 module.exports = r;

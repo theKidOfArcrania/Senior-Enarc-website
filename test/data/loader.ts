@@ -1,8 +1,10 @@
-const assert = require('assert');
-const fs = require('fs');
-const util = require('../../lib/util.js');
+import * as assert from 'assert';
+import * as fs from 'fs';
+import * as util from '../../lib/util';
+import type * as tents from '../../lib/model/enttypes';
+import type * as typ from '../../lib/model/dbtypes';
 
-const tables = [
+const tables: [keyof tents.DB, typ.Tables2, string][] = [
   ['COMPANY', 'Company', 'name'],
   ['USER', 'User', 'userID'],
   ['EMPLOYEE', 'Employee', 'euid'],
@@ -21,28 +23,31 @@ const foreignKeys = {
 };
 
 // Load test data
-ents = {};
-db = {
-  USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-  STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, TEAM: {},
-  HELP_TICKET: {}, INVITE: {},
+type ArrayElement<T> = T extends (infer Ele)[] ? Ele : T;
+type Mapped<T> = {[Tbl in keyof T]?: Map<string|number, ArrayElement<T[Tbl]>>};
+const ents: tents.DB = {
+  USER: [], PROJECT: [], UTD_PERSONNEL: [], FACULTY: [], STUDENT: [],
+  EMPLOYEE: [], COMPANY: [], TEAM: [], HELP_TICKET: [], INVITE: [],
 };
+export const db: Mapped<tents.DB> = {};
 
-
-for (const [tbl, _, key] of tables) { // eslint-disable-line no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+for (const [tbl, _, key] of tables) {
   ents[tbl] = JSON.parse(fs.readFileSync(`test/data/${tbl}.json`, 'utf8'));
   const t = db[tbl] = new Map();
   for (const ent of ents[tbl]) {
     t.set(ent[key], ent);
     if (tbl === 'PROJECT') {
-      ent.skillsReq.sort(util.caseInsensOrder);
+      (ent as tents.Project).skillsReq.sort(util.caseInsensOrder);
     } else if (tbl === 'TEAM') {
-      if (!ent.choices) ent.choices = [];
-      ent.choices = ent.choices.concat(Array(6).fill(null)).slice(0, 6);
+      const t = ent as tents.Team;
+      if (!t.choices) t.choices = [];
+      t.choices = t.choices.concat(Array(6).fill(null)).slice(0, 6);
     } else if (tbl === 'STUDENT') {
-      ent.skills.sort(util.caseInsensOrder);
+      (ent as tents.Student).skills.sort(util.caseInsensOrder);
     } else if (tbl === 'INVITE') {
-      ent.expiration = new Date(ent.expiration);
+      (ent as tents.Invite).expiration =
+          new Date((ent as tents.Invite).expiration);
     }
   }
 }
@@ -50,10 +55,11 @@ for (const [tbl, _, key] of tables) { // eslint-disable-line no-unused-vars
 
 /**
  * Load the test sample data into a particular db instance
- * @param {Object} dbinst      the DB instance to load into
+ * @param dbinst - the DB instance to load into
  */
-async function loadIntoDB(dbinst) {
-  alters = {};
+export default async function loadIntoDB(dbinst): Promise<void> {
+  const alters: {[P in typ.Tables2]?: [typ.Tables2, {[P: string]: string}][]} =
+    {};
   for (const tbl of Object.keys(foreignKeys)) {
     alters[tbl] = [];
   }
@@ -63,7 +69,7 @@ async function loadIntoDB(dbinst) {
     for (const ent of ents[tbl]) {
       const ent2 = Object.assign({}, ent);
       if (name in foreignKeys) {
-        alt = {};
+        const alt = {};
         for (const fk of foreignKeys[name]) {
           if (ent2[fk] !== null && ent2[fk] !== undefined) alt[fk] = ent2[fk];
           delete ent2[fk];
@@ -84,6 +90,4 @@ async function loadIntoDB(dbinst) {
   }
 }
 
-exports.db = db;
-exports.users = Array(...db.USER.keys());
-exports.loadIntoDB = loadIntoDB;
+export const users = [...db.USER.keys()];

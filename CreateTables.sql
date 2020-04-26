@@ -28,13 +28,13 @@ create table Employee (
 );
 
 create table FacultyOrTeam (
-	teamID int,
-  isRegTeam boolean,
+	teamID int NOT NULL,
+  isRegTeam boolean NOT NULL,
   PRIMARY KEY (teamID)
 );
 
 create table UTDPersonnel (
-	uid int,
+	uid int NOT NULL,
   uType ENUM('student', 'staff', 'faculty') NOT NULL,
   netID varchar(10) NOT NULL,
   isAdmin boolean NOT NULL,
@@ -43,7 +43,7 @@ create table UTDPersonnel (
 );
 
 create table Faculty (
-	fuid int,
+	fuid int NOT NULL,
   tid int NOT NULL,
   PRIMARY KEY (fuid),
   FOREIGN KEY (fuid) references UTDPersonnel (uid) ON DELETE CASCADE
@@ -53,7 +53,7 @@ create table Faculty (
 );
 
 create table Student (
-	suid int,
+	suid int NOT NULL,
   major varchar(30) NOT NULL,
   resume varchar(100),
   memberOf int,
@@ -63,7 +63,7 @@ create table Student (
 );
 
 create table Skills (
-  stuUID int,
+  stuUID int NOT NULL,
   skill varchar(50) NOT NULL,
   primary key (stuUID, skill),
   foreign key (stuUID) references Student (suid)
@@ -71,7 +71,7 @@ create table Skills (
 );
 
 create table Project (
-	projID int,
+	projID int NOT NULL,
   pName varchar(50) NOT NULL,
   company varchar(50) NOT NULL,
   image varchar(100),
@@ -95,7 +95,7 @@ create table Project (
 );
 
 create table Team (
-	tid int,
+	tid int NOT NULL,
   name varchar(50) NOT NULL UNIQUE,
   assignedProj int NULL UNIQUE,
   budget float NOT NULL,
@@ -124,15 +124,15 @@ create table Choice (
 );
 
 create table SkillsReq (
-	pid int,
-  skillName varchar(50),
+	pid int NOT NULL,
+  skillName varchar(50) NOT NULL,
 	PRIMARY KEY (pid, skillName),
   FOREIGN KEY (pid) references Project (projID)
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 create table HelpTicket (
-	hid int,
+	hid int NOT NULL,
   hStatus ENUM('open', 'closed', 'resolved') NOT NULL,
   hDescription varchar(1000) NOT NULL,
   requestor int,
@@ -142,7 +142,7 @@ create table HelpTicket (
 );
 
 create table Invite (
-  inviteID int,
+  inviteID int NOT NULL,
   expiration date NOT NULL,
   company varchar(50),
   managerFname varchar(50),

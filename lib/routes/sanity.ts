@@ -1,7 +1,9 @@
-const express = require('express');
-const ct = require('../chktype.js');
-const {ProjectStatus, HelpTicketStatus} = require('../model/db.js');
-const r = new express.Router();
+import * as express from 'express';
+
+import * as ent from '../model/enttypes';
+import ct from '../chktype';
+
+const r = express.Router();
 
 r.post('/login', ct(ct.obj({
   email: ct.string(100),
@@ -17,13 +19,13 @@ r.delete('/admin/:entity/list', ct(ct.array(ct.int)));
 
 // Contains a key-value pair of the entity name -> tuple of the primary key
 // types and the other field types
-adminEnts = {
+const adminEnts = {
   company: [{name: ct.string(50)}, {
     logo: ct.file,
     manager: ct.int,
   }],
   helpticket: [{hid: ct.int}, {
-    hStatus: ct.enumT(HelpTicketStatus),
+    hStatus: ct.enumT(ent.ticketStatuses),
     hDescription: ct.string(100),
     requestor: ct.int,
   }],
@@ -40,7 +42,7 @@ adminEnts = {
     projDoc: ct.file,
     company: ct.string(50),
     pDesc: ct.string(1000),
-    status: ct.enumT(ProjectStatus),
+    status: ct.enumT(new Set(ent.projectStatuses.keys())),
     sponsor: ct.int,
     mentor: ct.int,
     advisor: ct.int,
@@ -112,7 +114,7 @@ r.post('/help', ct(ct.obj({
 
 r.put('/help', ct(ct.obj({
   hid: ct.int,
-  hStatus: ct.enumT(HelpTicketStatus),
+  hStatus: ct.enumT(ent.ticketStatuses),
   hDescription: ct.string(100),
 })));
 

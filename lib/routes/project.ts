@@ -1,46 +1,57 @@
-const express = require('express');
-const asyncHan = require('express-async-handler');
+import * as express from 'express';
+import {asyncHan} from '../util';
 
-const {getInst, ProjectStatus} = require('../model/db.js');
-const {User, UTDPersonnel} = require('../model/user.js');
-const utypes = UTDPersonnel.types;
-const util = require('../util.js');
-const msg = require('../msg.js');
+import {getInst} from '../model/db';
+import msg from '../msg';
+import * as auth from './auth';
+import {Some, isNull} from '../util';
+import * as util from '../util';
+import * as ent from '../model/enttypes';
+import {User} from '../model/usertypes';
+import {User as CUser} from '../model/user';
+import type {DatabaseTransaction as DBTrans} from '../model/dbtypes';
 
-const r = new express.Router();
+import {UTDType as utypes} from '../model/enttypes';
+
+const r = express.Router();
 
 /**
  * Obtains a list of projects that this user is a member of or manages.
- * @param {Transaction} tr   the transaction object
- * @param {Object}      u   the user.
- * @return {Integer[]} a list of project IDs.
+ * @param tr - the transaction object
+ * @param u - the user.
  */
-async function partOfProjs(tr, u) {
-  const pids = new Set(await tr.findManagesProject(u.userID));
+async function partOfProjs<T>(tr: DBTrans<T>, u: User): Promise<number[]> {
+  const pids = new Set<number>(await tr.findManagesProject(u.userID));
   for (const tid of u.teams) {
-    const proj = (await tr.loadTeamInfo(tid)).assignedProj;
-    if (proj !== null) pids.add(proj);
+    const team = await tr.loadTeamInfo(tid);
+    if (isNull(team)) continue;
+    const proj = team.assignedProj;
+    if (!isNull(proj)) pids.add(proj);
   }
   return [...pids];
 }
 
+enum Access {
+  NONE, RESTRICTED, FULL
+}
+
 /**
- * Obtains a restriction level for a particular project and user.
- * @param {Transaction} tr  the transaction object
- * @param {Object}      u   the user.
- * @param {Object}      p   the project
- * @return {Boolean/Null} true if the user can get full access, false if the
- *   user can get restricted access (view public info), null if user cannot
- *   get any access.
+ * Obtains a restriction level for a particular project and user. This returns a
+ * tri-state determining the access level.
+ *
+ * @param tr -  the transaction object
+ * @param u - the user.
+ * @param p - the project
  */
-async function projectRestrictionLevel(tr, u, p) {
-  let access = false; // Default access level
+async function projectRestrictionLevel<T>(tr: DBTrans<T>, u: User,
+    p: ent.Project): Promise<Access> {
+  let access = Access.RESTRICTED; // Default access level
 
   // Projects that are explicitly marked invisible are restricted
-  if (!p.visible) access = null;
+  if (!p.visible) access = Access.NONE;
 
-  // If the status prohibits visiblity, set access to null.
-  if (!ProjectStatus.ofString(p.status).visible) access = null;
+  // If the status prohibits visiblity, no access is allowed
+  if (!ent.projectStatuses.get(p.status).visible) access = Access.NONE;
 
   if (u.isUtd) {
     const utd = u.utd;
@@ -48,87 +59,79 @@ async function projectRestrictionLevel(tr, u, p) {
       case utypes.STUDENT:
         // Once a student selects a project, they don't see any other projects
         // TODO: also check if team is assigned a project
-        if (utd.student.memberOf !== null) access = null;
+        if (utd.student.memberOf !== null) access = Access.NONE;
         break;
       case utypes.STAFF:
         // Staff by default have full read access
-        access = true;
+        access = Access.FULL;
         break;
       case utypes.FACULTY: // faculty only get PUBLIC access.
         break;
     }
 
     // Admins gets full access
-    if (utd.isAdmin) access = true;
+    if (utd.isAdmin) access = Access.FULL;
   } else {
     // Non UTD people by default get no access to any projects
-    access = null;
+    access = Access.NONE;
   }
 
   // Employees see all created projects of their own company
-  if (u.isEmployee && u.employee.worksAt === p.company) access = true;
-  if ([p.advisor, p.sponsor, p.mentor].includes(u.userID)) access = true;
+  if (u.isEmployee && u.employee.worksAt === p.company) access = Access.FULL;
+  if ([p.advisor, p.sponsor, p.mentor].includes(u.userID)) access = Access.FULL;
 
   // Users in a team that is assigned that project get full access
   const tid = await tr.findProjectAssignedTeam(p.projID);
-  if (tid !== null && u.teams.includes(tid)) access = true;
+  if (!isNull(tid) && u.teams.includes(tid)) access = Access.FULL;
 
   return access;
 }
 
 /**
  * Loads the public information of a user
- * @param {Transaction} tr  the transaction object
- * @param {Integer}     uid the uid of the user. If null, this will return null
- * @return {Object} the user object that can be JSON'ed.
+ * @param tr -  the transaction object
+ * @param uid - the uid of the user. If null, this will return null
  */
-async function loadUser(tr, uid) {
+async function loadUser<T>(tr: DBTrans<T>, uid: Some<number>):
+    Promise<Some<ent.Users>> {
   if (uid === null) return null;
 
-  const u = new User(uid);
+  const u = new CUser(uid);
   await u.reload(tr);
   return util.copyAttribs({}, u, {'uid': null, 'fname': null, 'lname': null,
-    'email': null});
+    'email': null}) as ent.Users;
 }
 
 /**
  * Loads the team, loading all aggregate data that is allowed for this user.
- * @param {Transaction} tr   the transaction object
- * @param {Object}      u    the user requesting this project data.
- * @param {Integer}     pid  the project ID to load.
- * @return {Object} the processed data, or null if the user has insufficient
- *     permissions to view anything
+ * @param tr - the transaction object
+ * @param u - the user requesting this project data.
+ * @param pid - the project ID to load.
  */
-async function loadProject(tr, u, pid) {
-  let p;
-
-  try {
-    p = await tr.loadProjectInfo(pid);
-  } catch (e) {
-    if (!e.dberror) throw e;
-    return null;
-  }
+async function loadProject<T>(tr: DBTrans<T>, u: User, pid: number):
+    Promise<Some<ent.Project>> {
+  const p = await tr.loadProjectInfo(pid);
+  if (isNull(p)) return null;
 
   const access = await projectRestrictionLevel(tr, u, p);
-  if (access === null) return null;
+  if (access === Access.NONE) return null;
 
-  p.mentor = await loadUser(tr, p.mentor);
-  p.sponsor = await loadUser(tr, p.sponsor);
-  p.advisor = await loadUser(tr, p.advisor);
+  // Yes this a huge type violation but we are returning objects not numbers!
+  p.mentor = (await loadUser(tr, p.mentor)) as Some<number>;
+  p.sponsor = (await loadUser(tr, p.sponsor) as Some<number>);
+  p.advisor = (await loadUser(tr, p.advisor) as Some<number>);
 
   let pret;
-  if (access) {
-    // Full access
+  if (access === Access.FULL) {
     pret = p;
   } else {
-    // Public access
     pret = util.copyAttribs({}, p, {'projID': null, 'pName': null,
       'image': null, 'pDesc': null, 'sponsor': null, 'advisor': null});
   }
   return pret;
 }
 
-r.get('/project', util.login, asyncHan(async (req, res) => {
+r.get('/project', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
   await getInst().doRTransaction(async (tr) => {
     const pids = await partOfProjs(tr, u);
@@ -145,14 +148,14 @@ r.get('/project', util.login, asyncHan(async (req, res) => {
   });
 }));
 
-r.post('/project/submit', util.login, util.employee,
+r.post('/project/submit', auth.login, auth.employee,
     asyncHan(async (req, res) => {
       const e = req.employee;
       let m = msg.fail('Unable to add the project.', 'internal');
       const success = await getInst().doTransaction(async (tr) => {
         const proj = req.bodySan;
         proj.projID = await tr.findUniqueID('Project');
-        proj.status = ProjectStatus.SUBMITTED.toString();
+        proj.status = ent.ProjectStatus.SUBMITTED.toString();
         proj.visible = false;
         proj.advisor = null;
         proj.company = e.worksAt;
@@ -166,27 +169,25 @@ r.post('/project/submit', util.login, util.employee,
       res.json(m);
     }));
 
-r.put('/project', util.login, util.employee, asyncHan(async (req, res) => {
+r.put('/project', auth.login, auth.employee, asyncHan(async (req, res) => {
   const e = req.employee;
   let m = msg.fail('Unable to add the project.', 'internal');
   const success = await getInst().doTransaction(async (tr) => {
-    let proj;
-    try {
-      proj = await tr.loadProjectInfo(req.bodySan.projID);
-    } catch (e) {
-      if (!e.dberror) throw e;
+    const proj = await tr.loadProjectInfo(req.bodySan.projID);
+    if (isNull(proj)) {
       m = msg.fail('Project does not exist', 'badproj');
       return false;
     }
 
     const comp = await tr.loadCompanyInfo(proj.company);
-    if (![proj.mentor, proj.sponsor, comp.manager].includes(e.uid)) {
+    const mgr = isNull(comp) ? null : comp.manager;
+    if (![proj.mentor, proj.sponsor, mgr].includes(e.uid)) {
       m = msg.fail('You do not have permissions to edit this project',
           'nopermproj');
       return false;
     }
 
-    if (!ProjectStatus.ofString(proj.status).modifiable) {
+    if (!ent.projectStatuses.get(proj.status).modifiable) {
       m = msg.fail('This project is currently not modifiable', 'badstatus');
       return false;
     }
@@ -201,36 +202,35 @@ r.put('/project', util.login, util.employee, asyncHan(async (req, res) => {
 }));
 
 // Obtain a list of projects that the user wants information for
-r.post('/project', util.login, asyncHan(async (req, res) => {
+r.post('/project', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
   const pids = Array.prototype.slice.call(req.bodySan);
   const projs = {};
   await getInst().doRTransaction(async (tr) => {
-    for (const p of await Promise.all(pids.map(
-        loadProject.bind(null, tr, u)))) {
-      if (p !== null) {
-        projs[p.projID] = p;
-      }
+    for (const pid of pids) {
+      const p = await loadProject(tr, u, pid);
+      if (!isNull(p)) projs[p.projID] = p;
     }
   });
   res.json(msg.success('Success', projs));
 }));
 
 // Obtain all the teams that this person is associated with
-r.get('/project/mylist', util.login, asyncHan(async (req, res) => {
+r.get('/project/mylist', auth.login, asyncHan(async (req, res) => {
   const pids = await getInst().doRTransaction((tr) =>
     partOfProjs(tr, req.user));
   res.json(msg.success('Success', pids));
 }));
 
 // Obtain the project IDs of all publically visible projects
-r.get('/project/list', util.login, asyncHan(async (req, res) => {
+r.get('/project/list', auth.login, asyncHan(async (req, res) => {
   const u = req.user;
   await getInst().doRTransaction(async (tr) => {
-    const projs = (await Promise.all((await tr.findAllProjects())
-        .map(loadProject.bind(null, tr, u))))
-        .filter((p) => p !== null)
-        .map((p) => p.projID);
+    const projs: number[] = [];
+    for (const pid of await tr.findAllProjects()) {
+      if (isNull(await loadProject(tr, u, pid))) continue;
+      projs.push(pid);
+    }
     res.json(msg.success('Success', projs));
   });
 }));

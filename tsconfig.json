@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "outDir": "./output",
+        "target": "es2019",
+        "sourceMap": true,
+        "noEmitOnError": true,
+        "moduleResolution": "node"
+    },
+    "paths": {
+        "*": [
+            "node_modules/*"
+        ]
+    },
+    "include": [
+        "./lib/**/*",
+        "./test/**/*"
+    ]
+}

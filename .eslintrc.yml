@@ -2,13 +2,30 @@ env:
   browser: true
   commonjs: true
   es6: true
+root: true
+parser: '@typescript-eslint/parser'
 plugins:
-  - jsdoc
+  - '@typescript-eslint'
+  - 'eslint-plugin-tsdoc'
+  - 'eslint-plugin-jsdoc'
 extends:
   - google
+  - 'eslint:recommended'
+  - 'plugin:@typescript-eslint/recommended'
+  - 'plugin:@typescript-eslint/eslint-recommended'
 globals:
   Atomics: readonly
   SharedArrayBuffer: readonly
 parserOptions:
-  ecmaVersion: 2018
-rules: {}
+  ecmaVersion: 2019
+  sourceType: module
+  #project: ['./tsconfig.json']
+rules:
+  tsdoc/syntax: "error"
+  require-jsdoc: "error"
+  valid-jsdoc: 0
+  no-extend-native: 0
+  new-cap: 0
+  '@typescript-eslint/no-explicit-any': 0
+  '@typescript-eslint/no-this-alias': 0
+  #"@typescript-eslint/no-floating-promises": "error"
