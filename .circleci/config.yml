@@ -4,7 +4,7 @@ orbs:
 executors:
   node-db:
     docker:
-      - image: circleci/node:11.8.0
+      - image: circleci/node:12.16
       - image: circleci/mysql:5.7
         environment:
           MYSQL_ROOT_PASSWORD: rootpw
@@ -35,13 +35,13 @@ jobs:
       name: node-db
     steps:
       - checkout
-      - run: cp lib/config.js.def lib/config.js
+      - run: cp lib/config.ts.def lib/config.ts
       - node/with-cache:
           steps:
             - run: npm install
             - init-db
             - run: npm run test-codecov
-            - run: npm run test-dangling
+            - run: npm run build
 
 
 workflows:
