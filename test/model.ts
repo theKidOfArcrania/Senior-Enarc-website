@@ -296,6 +296,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       ['Team', 39, {leader: 3}],
       ['UTD', 1, {isAdmin: true}],
       ['User', 0, {fname: 'John'}],
+      ['Invite', 1337, {managerEmail: 'test@gmail.com'}],
     ];
 
     // beforeEach(async function() {
@@ -305,7 +306,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
-      const deleteFunc = `delete${mth}`;
 
       describe(mth, function() {
         it('can partial update', async function() {
@@ -318,7 +318,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         });
         it('should not change if invalid ID', async function() {
           const init = Object.assign({}, await model[load](uid));
-          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          const bad = (util.isNumber(uid) ? 9001 : '9001');
           assert(!(await model[alter](bad, changes)), 'Changes made!');
           const after = Object.assign({}, await model[load](uid));
           assert.deepStrictEqual(after, init);
@@ -329,8 +329,34 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
           const after = Object.assign({}, await model[load](uid));
           assert.deepStrictEqual(after, init);
         });
+      });
+    }
+  });
+  describe('delete', function() {
+    type AlterSpec = [dtyp.Tables2, string|number];
+    const alters: AlterSpec[] = [
+      ['Company', 'Shufflebeat'],
+      ['Employee', 1],
+      ['HelpTicket', 1],
+      ['Project', 1],
+      ['Student', 0],
+      ['Team', 39],
+      ['UTD', 1],
+      ['User', 0],
+      ['Faculty', 1],
+      ['Invite', 1337],
+    ];
+
+    // beforeEach(async function() {
+    //   await loadIntoDB(model);
+    // });
+
+    for (const [mth, uid] of alters) {
+      const deleteFunc = `delete${mth}`;
+      const load = `load${mth}Info`;
+      describe(mth, function() {
         it('should not delete if invalid ID', async function() {
-          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          const bad = (util.isNumber(uid) ? 9001 : '9001');
           assert(!(await model[deleteFunc](bad)));
         });
         it('should delete if valid ID', async function() {
@@ -346,6 +372,44 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
             assert((await model[load](uid)));
             assert((await model[deleteFunc](null)));
             assert(isNull((await model[load](uid))));
+            return false;
+          });
+        });
+      });
+    }
+  });
+  describe('findAll', function() {
+    type AlterSpec = [dtyp.Tables2, string|number];
+    const alters: AlterSpec[] = [
+      ['Company', 'Shufflebeat'],
+      ['Employee', 1],
+      ['HelpTicket', 1],
+      ['Project', 1],
+      ['Student', 0],
+      ['Team', 39],
+      ['UTD', 1],
+      ['User', 0],
+      ['Faculty', 1],
+      ['Invite', 1337],
+    ];
+
+    // beforeEach(async function() {
+    //   await loadIntoDB(model);
+    // });
+
+    for (const [mth, uid] of alters) {
+      const deleteFunc = `delete${mth}`;
+      const findAll = `findAll${mth}s`;
+      describe(mth, function() {
+        it('should not be empty', async function() {
+          const findAllRes = await model[findAll]();
+          assert(findAllRes.length);
+        });
+        it('should be empty after null purge', async function() {
+          await model.doNestedTransaction(async () => {
+            assert((await model[deleteFunc](null)));
+            const postDelete = await model[findAll]();
+            assert(!(postDelete.length));
             return false;
           });
         });
