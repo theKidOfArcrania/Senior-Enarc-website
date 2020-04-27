@@ -15,6 +15,7 @@ config.IFACE = {
   host: 'localhost',
   port: 1337,
 };
+config.UPLOAD.debug = false;
 import initServer from '../lib/server';
 
 import * as util from '../lib/util';
@@ -36,6 +37,7 @@ const eVivianne = 'vweine4@ox.ac.uk';
 const eDarline = 'deric8@un.org';
 const eCattermoul = 'mcattermoul1@photobucket.com';
 const eKrystal = 'kfurlow5@china.com.cn';
+const eTiff = 'tlezemereh@ftc.gov';
 
 const eBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
@@ -50,6 +52,7 @@ const uspecs = {
     isAdmin: false, isUtd: true, isEmployee: false, uType: 'student',
   },
   [eKrystal]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'student'},
+  [eTiff]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'faculty'},
 };
 
 describe('server', function() {
@@ -377,6 +380,13 @@ describe('server', function() {
           password: null});
         assert(r2.success);
       });
+      it('must be student to join a team', async function() {
+        await doLogin(eBrown);
+        const r2 = await json.post('/api/v1/team/join', {team: 39,
+          password: null});
+        assert(!r2.success);
+        assert(r2.debug, 'notstudent');
+      });
     });
     describe('/team/list', function() {
       it('should deny access without login', async function() {
@@ -470,9 +480,17 @@ describe('server', function() {
         const r1 = await json.post('/api/v1/team/leave');
         assert(r1.success);
       });
+      it('should fail if student is not in group', async function() {
+        await doLogin(eCattermoul);
+        const r1: msg = await json.post('/api/v1/team/leave');
+        assert(!r1.success);
+        assert.strictEqual(r1.debug, 'notinteam');
+      });
     });
   });
   describe('project', function() {
+    const publicProjs = [1, 2, 5, 6, 10, 15, 16, 18, 19, 24, 25, 28, 33, 35, 36,
+      37, 40, 42, 44, 47, 48];
     describe('/project', function() {
       it('should return no projects to view', async function() {
         await doLogin(eBrown);
@@ -494,8 +512,48 @@ describe('server', function() {
         const keys = Object.keys(r1.body)
             .map((n) => parseInt(n))
             .nsort();
-        assert.deepStrictEqual(keys, [1, 2, 3, 5, 6, 10, 15, 16, 18, 19, 24,
-          25, 28, 33, 35, 36, 37, 40, 42, 44, 47, 48]);
+        assert.deepStrictEqual(keys, publicProjs);
+      });
+      it('stennes (staff) can access all projects', async function() {
+        await doLogin(eStennes);
+        const r1 = await json.post('/api/v1/project', util.range(0, 53));
+        assert(r1.success);
+        const projects = Object.keys(r1.body)
+            .map((n) => parseInt(n))
+            .nsort();
+        assert.deepStrictEqual(projects, util.range(1, 51));
+      });
+      it('Vivianne only has access to her company projects/ projects she is in',
+          async function() {
+            await doLogin(eVivianne);
+            const r1 = await json.post('/api/v1/project', util.range(0, 53));
+            assert(r1.success);
+            const projects = Object.keys(r1.body)
+                .map((n) => parseInt(n))
+                .nsort();
+            assert.deepStrictEqual(projects, [4, 7, 23, 34, 36, 37, 39, 49]);
+          });
+      it('Tiff (faculty only) should have public access on all visible, and ' +
+        'full access on those she is advising', async function() {
+        const fullAccess = [1, 12, 17, 22, 43, 49];
+        const list = [...new Set([...publicProjs, ...fullAccess])];
+        list.nsort();
+
+        await doLogin(eTiff);
+        const r1 = await json.post('/api/v1/project', util.range(0, 53));
+        assert(r1.success);
+        const pids = Object.keys(r1.body)
+            .map((n) => parseInt(n))
+            .nsort();
+        assert.deepStrictEqual(pids, list);
+
+        const actualFullAccess = [];
+        for (const pid of pids) {
+          if ('projDoc' in r1.body[pid]) {
+            actualFullAccess.push(pid);
+          }
+        }
+        assert.deepStrictEqual(actualFullAccess, fullAccess);
       });
       it('Project does not exist', async function() {
         await doLogin(eDowley);
@@ -519,8 +577,16 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'badstatus');
       });
-
-      // TODO: Create Project w/ modifiable status
+      it('modified project name', async function() {
+        await doLogin(eDowley);
+        const r1: msg = await json.put('/api/v1/project',
+            {projID: 3, pName: 'NewName'});
+        assert(r1.success);
+        const r2: msg = await json.post('/api/v1/project', [3]);
+        assert(r2.success);
+        assert.deepStrictEqual(Object.keys(r2.body), ['3']);
+        assert.equal(r2.body[3].pName, 'NewName');
+      });
     });
     describe('/project/submit', function() {
       it('should only allow employees to add projects', async function() {
@@ -584,6 +650,76 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notadmin');
       });
+    });
+  });
+  describe('upload', function() {
+    const fileBody = 'haha';
+    const file = Buffer.from(fileBody, 'utf8');
+    it('should fail if we are not logged in', async function() {
+      const r: msg = await agent.post('/api/v1/upload')
+          .set('accept', 'json')
+          .attach('file', file, 'test.jpg')
+          .expect(200)
+          .then((r) => r.body);
+      assert(!r.success);
+      assert.strictEqual(r.debug, 'nologin');
+    });
+    it('should fail if we send no file', async function() {
+      await doLogin(eDowley);
+      const r: msg = await json.post('/api/v1/upload');
+      assert(!r.success);
+      assert.strictEqual(r.debug, 'nofile');
+    });
+    it('should fail if we send file to wrong param', async function() {
+      await doLogin(eDowley);
+      const r: msg = await agent.post('/api/v1/upload')
+          .set('accept', 'json')
+          .field('file', 'notafile')
+          .attach('files', file, 'test.jpg')
+          .expect(200)
+          .then((r) => r.body);
+      assert(!r.success);
+      assert.strictEqual(r.debug, 'nofile');
+    });
+    it('should fail if we send multiple files', async function() {
+      await doLogin(eDowley);
+      const r: msg = await agent.post('/api/v1/upload')
+          .set('accept', 'json')
+          .attach('file', file, 'test.jpg')
+          .attach('file', file, 'test2.jpg')
+          .expect(200)
+          .then((r) => r.body);
+      assert(!r.success);
+      assert.strictEqual(r.debug, 'multifile');
+    });
+    it('should should return a name of the file we upload', async function() {
+      await doLogin(eDowley);
+      const r: msg = await agent.post('/api/v1/upload')
+          .set('accept', 'json')
+          .attach('file', file, 'test.jpg')
+          .expect(200)
+          .then((r) => r.body);
+      assert(r.success);
+      assert(util.isString(r.body.name));
+
+      await agent.get(`/api/v1/file/${r.body.name}`)
+          .expect('Content-Disposition', 'attachment; filename="test.jpg"')
+          .expect(200, file);
+    });
+    it('should should strip beginning backslashes', async function() {
+      const fileName = '%2f%2ftest.jpg$%!@#$%^;*()__+_*&^%$#@@:\\":';
+      await doLogin(eDowley);
+      const r: msg = await agent.post('/api/v1/upload')
+          .set('accept', 'json')
+          .attach('file', file, `/haha/path/${fileName}`)
+          .expect(200)
+          .then((r) => r.body);
+      assert(r.success);
+      assert(util.isString(r.body.name));
+
+      await agent.get(`/api/v1/file/${r.body.name}`)
+          .expect('Content-Disposition', `attachment; filename="${fileName}"`)
+          .expect(200, file);
     });
   });
 });

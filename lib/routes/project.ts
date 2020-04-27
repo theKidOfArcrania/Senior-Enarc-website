@@ -24,7 +24,7 @@ async function partOfProjs<T>(tr: DBTrans<T>, u: User): Promise<number[]> {
   const pids = new Set<number>(await tr.findManagesProject(u.userID));
   for (const tid of u.teams) {
     const team = await tr.loadTeamInfo(tid);
-    if (isNull(team)) continue;
+    if (isNull(team)) continue; // Error should not happen
     const proj = team.assignedProj;
     if (!isNull(proj)) pids.add(proj);
   }

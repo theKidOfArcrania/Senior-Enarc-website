@@ -199,6 +199,7 @@ admin.post('/bulk/archiveProjects', asyncHan(async (req, res) => {
 // TODO: search API for searching member of relations (company, team, project)
 restAPIFor('Company', {idField: 'name', parseID: util.ident});
 restAPIFor('HelpTicket', {idField: 'hid', parseID: util.ident});
+// TODO: set date
 restAPIFor('Invite', {idField: 'inviteID', parseID: parseInt2});
 restAPIFor('Project', {idField: 'projID', parseID: parseInt2});
 restAPIFor('Team', {
