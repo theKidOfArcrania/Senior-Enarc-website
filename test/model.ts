@@ -14,6 +14,7 @@ import {UTDType as utypes} from '../lib/model/enttypes';
 
 import * as loader from './data/loader';
 import loadIntoDB from './data/loader';
+import {isNull} from '../lib/util';
 
 const db2 = loader.db;
 
@@ -304,6 +305,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
+      const deleteFunc = `delete${mth}`;
 
       describe(mth, function() {
         it('can partial update', async function() {
@@ -327,27 +329,28 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
           const after = Object.assign({}, await model[load](uid));
           assert.deepStrictEqual(after, init);
         });
+        it('should not delete if invalid ID', async function() {
+          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          assert(!(await model[deleteFunc](bad)));
+        });
+        it('should delete if valid ID', async function() {
+          await model.doNestedTransaction(async () => {
+            assert((await model[load](uid)));
+            assert((await model[deleteFunc](uid)));
+            assert(isNull((await model[load](uid))));
+            return false;
+          });
+        });
+        it('should delete all if null is passed', async function() {
+          await model.doNestedTransaction(async () => {
+            assert((await model[load](uid)));
+            assert((await model[deleteFunc](null)));
+            assert(isNull((await model[load](uid))));
+            return false;
+          });
+        });
       });
     }
-  });
-
-  describe('deleteEntity in db.ts', function() {
-    it('should not delete bad ID', async function() {
-      assert(!(await model.deleteUser(1337)));
-    });
-    it('should delete valid USER ID', async function() {
-      assert((await model.deleteUser(19)));
-      assert(!(await model.loadUserInfo(19)));
-    });
-    it('testing null argument', async function() {
-      assert((await model.deleteUser(null)));
-    });
-    it('should delete valid Faculty ID and respective FACULTY_OR_TEAM entity',
-        async function() {
-          assert((await model.loadFacultyInfo(1)));
-          assert((await model.deleteFaculty(1)));
-          assert(!(await model.loadFacultyInfo(1)));
-        });
   });
 }
 
