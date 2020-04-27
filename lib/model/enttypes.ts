@@ -121,9 +121,9 @@ export interface Project {
 export interface Team {
   tid: number;
   name: string;
-  assignedProj: number;
+  assignedProj: Some<number>;
   budget: number;
-  leader: number;
+  leader: Some<number>;
   membLimit: number;
   password: Some<string>;
   comments: Some<string>;

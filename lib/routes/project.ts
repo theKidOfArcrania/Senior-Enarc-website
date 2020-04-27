@@ -24,7 +24,7 @@ async function partOfProjs<T>(tr: DBTrans<T>, u: User): Promise<number[]> {
   const pids = new Set<number>(await tr.findManagesProject(u.userID));
   for (const tid of u.teams) {
     const team = await tr.loadTeamInfo(tid);
-    if (isNull(team)) continue;
+    if (isNull(team)) continue; // Error should not happen
     const proj = team.assignedProj;
     if (!isNull(proj)) pids.add(proj);
   }
@@ -57,9 +57,14 @@ async function projectRestrictionLevel<T>(tr: DBTrans<T>, u: User,
     const utd = u.utd;
     switch (utd.uType) {
       case utypes.STUDENT:
-        // Once a student selects a project, they don't see any other projects
-        // TODO: also check if team is assigned a project
-        if (utd.student.memberOf !== null) access = Access.NONE;
+        // By default, a student gets full access to project information
+        if (access !== Access.NONE) access = Access.FULL;
+
+        if (!isNull(utd.student.memberOf)) {
+          const t = await tr.loadTeamInfo(utd.student.memberOf);
+          // Once a student selects a project, they don't see any other projects
+          if (isNull(t) || isNull(t.assignedProj)) access = Access.NONE;
+        }
         break;
       case utypes.STAFF:
         // Staff by default have full read access
@@ -126,7 +131,8 @@ async function loadProject<T>(tr: DBTrans<T>, u: User, pid: number):
     pret = p;
   } else {
     pret = util.copyAttribs({}, p, {'projID': null, 'pName': null,
-      'image': null, 'pDesc': null, 'sponsor': null, 'advisor': null});
+      'image': null, 'pDesc': null, 'sponsor': null, 'advisor': null,
+      'company': null});
   }
   return pret;
 }

@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   description: "This is the senior enarc project, which is a new way to manage the CS senior design projects. Use this page to browse all the API endpoints allowed by the backend."
-  version: "1.0.0"
+  version: "1.0.2"
   title: "Senior Enarc Backend"
   termsOfService: ""
   contact:
@@ -20,6 +20,8 @@ tags:
   description: "viewing and managing potential projects"
 - name: "team"
   description: "let's gather and divide into teams!"
+- name: "help"
+  description: "need to submit a help ticket?"
 - name: "admin"
   description: "bigly admin control panel to tweak all the information (requires admin account)"
 schemes:
@@ -1247,6 +1249,123 @@ paths:
                   type: array
                   items:
                     type: integer
+  /help:
+    get:
+      summary: Get a help ticket information
+      tags:
+      - "help"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/HelpTicket"
+    post:
+      summary: Create a help ticket
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: object
+          properties:
+            hDescription:
+              type: string
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a help ticket
+      tags:
+      - "help"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: object
+          properties:
+            hid: 
+              type: integer
+            hStatus:
+              type: string
+              enum:
+              - open
+              - closed
+              - resolve
+            hDescription:
+              type: string
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /help/list:
+    get:
+      summary: Get all the help tickets
+      tags:
+      - "help"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a set of help tickets
+      tags:
+      - "help"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/HelpTicket"
 
 securityDefinitions:
   petstore_auth:
@@ -1453,7 +1572,7 @@ definitions:
       comments:
         type: string
         maxLength: 1000
-      choice:
+      choices:
         type: array
         items:
           type: integer
