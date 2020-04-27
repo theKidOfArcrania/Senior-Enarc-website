@@ -284,7 +284,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     });
   });
-
   describe('update', function() {
     type AlterSpec = [dtyp.Tables2, string|number, {[P: string]: any}];
     const alters: AlterSpec[] = [
@@ -331,6 +330,25 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
+
+  describe('deleteEntity in db.ts', function() {
+    it('should not delete bad ID', async function() {
+      assert(!(await model.deleteUser(1337)));
+    });
+    it('should delete valid USER ID', async function() {
+      assert((await model.deleteUser(19)));
+      assert(!(await model.loadUserInfo(19)));
+    });
+    it('testing null argument', async function() {
+      assert((await model.deleteUser(null)));
+    });
+    it('should delete valid Faculty ID and respective FACULTY_OR_TEAM entity',
+        async function() {
+          assert((await model.loadFacultyInfo(1)));
+          assert((await model.deleteFaculty(1)));
+          assert(!(await model.loadFacultyInfo(1)));
+        });
+  });
 }
 
 describe('model', async function() {
@@ -347,5 +365,4 @@ describe('model', async function() {
 
   describe('mysql', verifyModel.bind(this, sqldb));
 });
-
 // TODO: test partial updates
