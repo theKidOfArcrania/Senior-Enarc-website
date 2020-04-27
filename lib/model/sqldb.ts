@@ -1,26 +1,13 @@
 import * as typ from './dbtypes';
 import * as mysql from 'mysql';
 import * as util from '../util';
+import * as ent from './enttypes';
+import {getPrimaryKey, getFields, FieldType as ftyp} from './enttypes';
 import {Some, isNull} from '../util';
 
-const ENTITY_LIST = ['HelpTicket', 'SkillsReq', 'Choice', 'Project',
-  'Team', 'UTDPersonnel', 'Student', 'Faculty', 'FacultyOrTeam',
-  'Users', 'Employee', 'Company', 'Invite'];
-
-const tblspecs = {
-  'PROJECT': ['Project', 'projID'],
-  'COMPANY': ['Company', 'name'],
-  'USER': ['Users', 'userID'],
-  'TEAM': ['Team', 'tid'],
-  'EMPLOYEE': ['Employee', 'euid'],
-  'UTD_PERSONNEL': ['UTDPersonnel', 'uid'],
-  'STUDENT': ['Student', 'suid'],
-  'FACULTY': ['Faculty', 'fuid'],
-  'FACULTY_OR_TEAM': ['FacultyOrTeam', 'teamID'],
-  'HELP_TICKET': ['HelpTicket', 'hid'],
-  'SKILLS': ['Skills', 'stuUID'],
-  'INVITE': ['Invite', 'inviteID'],
-};
+const DELETE_ORDER: ent.Tables[] = ['HELP_TICKET', 'SKILLS_REQ', 'CHOICE',
+  'PROJECT', 'TEAM', 'UTD_PERSONNEL', 'STUDENT', 'FACULTY', 'FACULTY_OR_TEAM',
+  'USER', 'EMPLOYEE', 'COMPANY', 'INVITE'];
 
 export interface QueryRes {
   result: any;
@@ -173,8 +160,8 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
   async clear(): Promise<void> {
     await this.checkValid();
     const deleteEntity = 'DELETE FROM ??';
-    for (const ent of ENTITY_LIST) {
-      await this._query(deleteEntity, ent);
+    for (const name of DELETE_ORDER) {
+      await this._query(deleteEntity, ent.schemas[name].tblname);
     }
   }
 
@@ -235,9 +222,10 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * Finds all the entities in the database of a specific type
    * @param entity - the name of the entity
    */
-  async _findAllEntities(entity): Promise<any[]> {
+  async _findAllEntities(entity: ent.Tables): Promise<any[]> {
     let qstr = 'SELECT ?? FROM ??';
-    const [tbl, pkey] = tblspecs[entity];
+    const tbl = ent.schemas[entity].tblname;
+    const pkey = getPrimaryKey(entity);
     if (entity === 'INVITE') qstr += ' WHERE expiration > NOW()';
     return (await this._query(qstr, [pkey, tbl])).result.map((r) => r[pkey]);
   }
@@ -365,8 +353,9 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * @param tableName - the table entity name
    * @param id - the id
    */
-  async _deleteEntity(tableName, id): Promise<boolean> {
-    const [name, pkey] = tblspecs[tableName];
+  async _deleteEntity(tableName: ent.Tables, id: ent.ID): Promise<boolean> {
+    const name = ent.schemas[tableName].tblname;
+    const pkey = getPrimaryKey(tableName);
     const qstr = `DELETE FROM ?? ${isNull(id) ? '' : 'WHERE ?? = ?'}`;
     return !!((await this._query(qstr, [name, pkey, id])).result.affectedRows);
   }
@@ -375,17 +364,17 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * Generic insert entity.
    *
    * @param  tableName - the table entity name
-   * @param  attribs - a key-value dict of attributes and default vals.
-   * @param  pkey - the name of the primary key
    * @param  id -  the id
    * @param  info - the attributes of the entity
    */
-  async _insertEntity(tableName, attribs, pkey, id, info): Promise<boolean> {
-    const [name, pkey2] = tblspecs[tableName];
-    info = util.copyAttribs({}, info, attribs);
+  async _insertEntity(tableName: ent.Tables, id, info): Promise<boolean> {
+    const name = ent.schemas[tableName].tblname;
+    const pkey = getPrimaryKey(tableName);
+    info = util.copyAttribs({}, info, getFields(tableName, ftyp.REGULAR));
     info[pkey] = id;
+
     const test = 'SELECT * FROM ?? WHERE ?? = ?';
-    if ((await this._query(test, [name, pkey2, info[pkey]]))
+    if ((await this._query(test, [name, pkey, info[pkey]]))
         .result.length) return false;
     const qstr = 'INSERT INTO ?? SET ?';
     await this._query(qstr, [name, info]);
@@ -398,9 +387,10 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * @param  id - of the entity
    * @param  tblname - table name
    */
-  async _loadEntity(id, tblname): Promise<Some<typ.Entity>> {
+  async _loadEntity(id, tblname: ent.Tables): Promise<Some<typ.Entity>> {
     const select = 'SELECT * FROM ?? WHERE ?? = ?';
-    const [tbl, pkey] = tblspecs[tblname];
+    const tbl = ent.schemas[tblname].tblname;
+    const pkey = getPrimaryKey(tblname);
     const res = (await this._query(select, [tbl, pkey, id])).result;
     if (res.length === 0) return null;
     return Object.assign({}, res[0]);
@@ -413,19 +403,17 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * with a given whitelist and given the entity's name and the name of its ID
    * If successful, this will return true
    *
-   * @param whiteList - list of attributes that can be changed
+   * @param entity - name of the entity being modified
    * @param ID - value of ID being search for
    * @param changes - key/value pairs of attributes and new values
-   * @param entity - name of the entity being modified
-   * @param entityID - name of the ID of the entity being modified
    */
-  async _alterEntity(whiteList, ID, changes, entity, entityID):
+  async _alterEntity(entity: ent.Tables, ID, changes):
       Promise<boolean> {
     const acceptedChanges = {};
     let hasChanges = false;
-    const tbl = tblspecs[entity][0];
+    const tbl = ent.schemas[entity].tblname;
 
-    for (const key of whiteList) {
+    for (const key of getFields(entity, ftyp.REGULAR)) {
       if (key in changes) {
         acceptedChanges[key] = changes[key];
         hasChanges = true;
@@ -435,7 +423,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
 
     const $updateEntity = 'UPDATE ?? SET ? WHERE ?? = ?';
     const res = (await this._query($updateEntity, [tbl, acceptedChanges,
-      entityID, ID])).result;
+      getPrimaryKey(entity), ID])).result;
     return res.affectedRows >= 1;
   }
 }

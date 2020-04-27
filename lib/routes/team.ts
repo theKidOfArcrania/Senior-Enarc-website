@@ -130,10 +130,10 @@ async function loadTeam<DB>(tr: DBTrans<DB>, u: User, onlyTeam: boolean,
   } else {
     // TODO: maybe make this more efficient by making a direct query
     // Public access
-    tret = util.copyAttribs({}, t, {'tid': null, 'leader': null,
-      'comments': null, 'name': null, 'membLimit': null});
-    tret.members = members.map((m) => util.copyAttribs({}, m, {
-      'uid': null, 'fname': null, 'lname': null, 'email': null}));
+    tret = util.copyAttribs({}, t, ['tid', 'leader', 'comments', 'name',
+      'membLimit']);
+    tret.members = members.map((m) => util.copyAttribs({}, m, ['uid',
+      'fname', 'lname', 'email']));
   }
   return tret;
 }

@@ -150,6 +150,7 @@ export class Employee extends Uent implements typ.Employee {
   uid: number;
   worksAt: string;
   password: string;
+  oneTimePass: boolean;
 
   /**
    * Creates an employee from a uid

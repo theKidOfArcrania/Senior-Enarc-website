@@ -129,14 +129,32 @@ export function randomID(): string {
 }
 
 /**
- * Copy object attributes
+ * Copy object attributes. If an attribute does not exist in src, set that to
+ * null.
+ *
+ * @param dst - the destination objecct
+ * @param src - the source objecct
+ * @param attribs - the attribute to copy
+ */
+export function copyAttribs(dst: object, src: object, attribs: string[]):
+    object {
+  for (const prop of attribs) {
+    if (prop in src) dst[prop] = src[prop];
+    else dst[prop] = null;
+  }
+  return dst;
+}
+
+/**
+ * Copy object attributes, using attribs to get default values as needed
  * @param dst - the destination objecct
  * @param src - the source objecct
  * @param attribs - the attribute/default values to copy
  */
-export function copyAttribs(dst: object, src: object, attribs: object): object {
-  for (const prop of Object.getOwnPropertyNames(attribs)) {
-    dst[prop] = (src[prop] !== undefined) ? src[prop] : attribs[prop];
+export function copyAttribsDef(dst: object, src: object, attribs: object):
+    object {
+  for (const [prop, def] of Object.entries(attribs)) {
+    dst[prop] = (src[prop] !== undefined) ? src[prop] : def;
   }
   return dst;
 }

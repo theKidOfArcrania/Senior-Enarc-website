@@ -1,6 +1,7 @@
 import * as express from 'express';
 import {asyncHan} from '../util';
 
+import type {ID} from '../model/enttypes';
 import * as db from '../model/dbtypes';
 import {getInst} from '../model/db';
 import msg from '../msg';
@@ -24,11 +25,9 @@ r.use('/admin/', admin);
 const trFn = <Args extends any[], DB>(fn: string) =>
   (tr: db.DatabaseTransaction<DB>, ...args: Args): any => tr[fn](...args);
 
-type ID = (string|number);
-
 interface RestAPIOptions {
   idField: string;
-  parseID: ((string) => (ID|null));
+  parseID: ((string) => util.Some<ID>);
   processInput?: ((o: util.Jsonable) => Promise<util.Jsonable>);
   processOutput?: ((o: db.Entity) => Promise<object>);
   insertFn?: <DB> (tr: db.DatabaseTransaction<DB>, id: ID, ent: any) =>
@@ -95,7 +94,7 @@ function restAPIFor(entity, opts: RestAPIOptions): void {
   // Get an entity
   admin.get(`/${entity2}`, asyncHan<{id: string}>(async (req, res) => {
     const id = opts.parseID(req.query.id);
-    if (id === undefined || id === null) {
+    if (util.isNull(id)) {
       res.json(msg.fail('Invalid request format!', 'badformat'));
       return;
     }
