@@ -17,6 +17,8 @@ import loadIntoDB from '../test/data/loader';
 
 import MemDatabase, {getInst, setInst} from './model/db';
 
+config.FILE_STORE_CONFIG.logFn = util.log;
+
 /**
  * Initializes the server;
  */
@@ -39,9 +41,7 @@ export default async function initServer(): Promise<http.Server> {
   await fs.mkdir(config.UPLOAD_IDS, {recursive: true});
 
   // Log HTTP requests
-  if (!config.TESTING) {
-    app.use(morgan('combined'));
-  }
+  if (!config.TESTING) app.use(morgan('combined'));
 
   // Parse JSON
   app.use(express.json());
@@ -99,14 +99,8 @@ export default async function initServer(): Promise<http.Server> {
     const ret = app.listen(iface.port, iface.host, () => resolve(ret));
   });
 
-  if (!config.TESTING) {
-    util.log(`Listening on port ${iface.port}`);
-  }
+  util.log(`Listening on port ${iface.port}`);
   return server;
 }
 
-if (!config.TESTING) {
-  initServer().catch(function(err) {
-    console.error(err);
-  });
-}
+if (!config.TESTING) initServer().catch(console.error);

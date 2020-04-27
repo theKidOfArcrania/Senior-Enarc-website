@@ -79,6 +79,7 @@ async function checkLoadTeam<T>(tr: DBTrans<T>, tid: Some<number>,
 
   const team = await tr.loadTeamInfo(tid);
   if (isNull(team)) {
+    // Should never happen
     return util.Fail(msg.fail('Error loading team info', 'internal'));
   }
 
