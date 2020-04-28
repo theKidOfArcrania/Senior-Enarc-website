@@ -196,7 +196,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
     let ret = Object.keys(this._db[entity]);
     if (entity === 'INVITE') {
       ret = ret.filter((k) =>
-        this._db.INVITE[k].expiration.valueOf() >= Date.now());
+        new Date(this._db.INVITE[k].expiration).valueOf() >= Date.now());
     }
     return ret;
   }
@@ -376,7 +376,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
       await this.pushSP();
       try {
         for (const id2 of Object.keys(this._db[tableName])) {
-          await this._deleteEntity(tableName, id2);
+          let id3: ent.ID = id2;
+          if (tableName !== 'COMPANY') id3 = parseInt(id2);
+          await this._deleteEntity(tableName, id3);
         }
       } catch (e) {
         await this.popSP();
@@ -395,7 +397,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
       const fkeys = foreignKeys[tableName] || [];
       try {
         for (const [tbl, fkey, dmode] of fkeys) {
-          for (const [k, v] of Object.entries(this._db[tbl])) {
+          for (const [kk, v] of Object.entries(this._db[tbl])) {
+            let k: ent.ID = kk;
+            if (tbl !== 'COMPANY') k = parseInt(kk);
             if (v[fkey] === id) {
               if (dmode === null) { // ON DELETE SET NULL
                 v[fkey] = null;
@@ -405,6 +409,8 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
                 throw new typ.DBError('Foreign key constraint failure on ' +
                   `\`${tbl}\`.\`${fkey}\``);
               }
+            } else {
+              if (v[fkey] == id) throw new Error(JSON.stringify([v[fkey], id]));
             }
           }
         }
@@ -463,7 +469,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
   async _loadEntity(id, tblname): Promise<Some<typ.Entity>> {
     const tbl = this._db[tblname];
     if (id in tbl) {
-      return Object.assign({}, tbl[id]);
+      const ret = Object.assign({}, tbl[id]);
+      if (tblname === 'INVITE') ret.expiration = new Date(ret.expiration);
+      return ret;
     } else {
       return null;
     }

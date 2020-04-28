@@ -117,6 +117,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     type UserFilt<T> = (u: utyp.User) => T;
     describe('user', function() {
       // Various filters to see different views of a user
+      /* eslint-disable @typescript-eslint/explicit-function-return-type */
       const utdFilt = (uu: utyp.User) => (uu.isUtd && uu.utd);
       const empFilt = (uu: utyp.User) => (uu.isEmployee && uu.employee);
       const stuFilt = (uu: utyp.User) => (uu.isUtd &&
@@ -125,6 +126,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         uu.utd.uType == utypes.FACULTY && uu.utd.faculty);
       const staffFilt = (uu: utyp.User) => (uu.isUtd &&
         uu.utd.uType == utypes.STAFF && uu.utd.staff);
+      /* eslint-enable @typescript-eslint/explicit-function-return-type */
 
       /**
        * Iterate through each user, filtering/modifying each user based on the
@@ -286,24 +288,19 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     });
   });
+  type AlterSpec = [etyp.Tables2, etyp.ID, {[P: string]: any}];
+  const alters: AlterSpec[] = [
+    ['Company', 'Shufflebeat', {logo: 'abcde'}],
+    ['Employee', 1, {password: 'abcde'}],
+    ['HelpTicket', 1, {requestor: 1}],
+    ['Project', 1, {advisor: 1}],
+    ['Student', 0, {major: 'no nonsense'}],
+    ['Team', 39, {leader: 3}],
+    ['UTD', 1, {isAdmin: true}],
+    ['User', 0, {fname: 'John'}],
+    ['Invite', 1337, {managerEmail: 'test@gmail.com'}],
+  ];
   describe('update', function() {
-    type AlterSpec = [etyp.Tables2, string|number, {[P: string]: any}];
-    const alters: AlterSpec[] = [
-      ['Company', 'Shufflebeat', {logo: 'abcde'}],
-      ['Employee', 1, {password: 'abcde'}],
-      ['HelpTicket', 1, {requestor: 1}],
-      ['Project', 1, {advisor: 1}],
-      ['Student', 0, {major: 'no nonsense'}],
-      ['Team', 39, {leader: 3}],
-      ['UTD', 1, {isAdmin: true}],
-      ['User', 0, {fname: 'John'}],
-      ['Invite', 1337, {managerEmail: 'test@gmail.com'}],
-    ];
-
-    // beforeEach(async function() {
-    //   await loadIntoDB(model);
-    // });
-
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
@@ -334,24 +331,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     }
   });
   describe('delete', function() {
-    type AlterSpec = [dtyp.Tables2, string|number];
-    const alters: AlterSpec[] = [
-      ['Company', 'Shufflebeat'],
-      ['Employee', 1],
-      ['HelpTicket', 1],
-      ['Project', 1],
-      ['Student', 0],
-      ['Team', 39],
-      ['UTD', 1],
-      ['User', 0],
-      ['Faculty', 1],
-      ['Invite', 1337],
-    ];
-
-    // beforeEach(async function() {
-    //   await loadIntoDB(model);
-    // });
-
     for (const [mth, uid] of alters) {
       const deleteFunc = `delete${mth}`;
       const load = `load${mth}Info`;
@@ -362,14 +341,20 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         });
         it('should delete if valid ID', async function() {
           await model.doNestedTransaction(async () => {
-            assert((await model[load](uid)));
-            assert((await model[deleteFunc](uid)));
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
+            assert(await model[load](uid));
+            assert(await model[deleteFunc](uid));
             assert(isNull((await model[load](uid))));
             return false;
           });
         });
         it('should delete all if null is passed', async function() {
           await model.doNestedTransaction(async () => {
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
             assert((await model[load](uid)));
             assert((await model[deleteFunc](null)));
             assert(isNull((await model[load](uid))));
@@ -380,25 +365,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     }
   });
   describe('findAll', function() {
-    type AlterSpec = [dtyp.Tables2, string|number];
-    const alters: AlterSpec[] = [
-      ['Company', 'Shufflebeat'],
-      ['Employee', 1],
-      ['HelpTicket', 1],
-      ['Project', 1],
-      ['Student', 0],
-      ['Team', 39],
-      ['UTD', 1],
-      ['User', 0],
-      ['Faculty', 1],
-      ['Invite', 1337],
-    ];
-
-    // beforeEach(async function() {
-    //   await loadIntoDB(model);
-    // });
-
-    for (const [mth, uid] of alters) {
+    for (const [mth] of alters) {
       const deleteFunc = `delete${mth}`;
       const findAll = `findAll${mth}s`;
       describe(mth, function() {
@@ -408,6 +375,9 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         });
         it('should be empty after null purge', async function() {
           await model.doNestedTransaction(async () => {
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
             assert((await model[deleteFunc](null)));
             const postDelete = await model[findAll]();
             assert(!(postDelete.length));
