@@ -439,6 +439,23 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
+  type SearchSpec = [etyp.Tables2, etyp.ID, string];
+  const search: SearchSpec[] = [
+    ['User', 'adowley0@myspace.com', 'Email'],
+    ['Team', 'Looking for another member if possible!', 'Name'],
+  ];
+  describe('search', function() {
+    for (const [mth, query, queryTitle] of search) {
+      const load = `load${mth}Info`;
+      const searchFunc = `search${mth}By${queryTitle}`;
+
+      describe(mth, function() {
+        it('fails on searching bad ID', async function() {
+          assert(isNull(await model[searchFunc](query)));
+        });
+      });
+    }
+  });
 }
 
 describe('model', async function() {
