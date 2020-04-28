@@ -462,6 +462,29 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
+  describe('bulk ops', function() {
+    describe('Student Purge', function() {
+      it('no remaining students after purge', async function() {
+        await model.doNestedTransaction(async () => {
+          assert(await model[`deleteAllStudents`]());
+          const postStudentPurge = (await model[`findAllStudents`]());
+          assert(!(postStudentPurge.length));
+          return false;
+        });
+      });
+    });
+    describe('Project Archive', function() {
+
+      it('no remaining projects after archiving', async function() {
+        await model.doNestedTransaction(async () => {
+          assert(await model[`archiveAllProjects`]());
+          const postProjectPurge = (await model[`findAllProjects`]());
+          assert(!(postProjectPurge.length));
+          return false;
+        });
+      });
+    });
+  });
 }
 
 describe('model', async function() {
