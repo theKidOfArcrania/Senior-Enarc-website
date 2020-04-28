@@ -10,10 +10,12 @@ import * as util from '../lib/util';
 
 import * as dtyp from '../lib/model/dbtypes';
 import * as utyp from '../lib/model/usertypes';
+import * as etyp from '../lib/model/enttypes';
 import {UTDType as utypes} from '../lib/model/enttypes';
 
 import * as loader from './data/loader';
 import loadIntoDB from './data/loader';
+import {isNull} from '../lib/util';
 
 const db2 = loader.db;
 
@@ -86,6 +88,55 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       await model.restoreSP();
       assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'closed'})));
     });
+
+    it('error within doTransaction reverts', async function() {
+      let err;
+      const help = {
+        hid: 71337,
+        hStatus: 'open',
+        hDescription: 'Hello world!',
+        requestor: 0,
+      };
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.insertHelpTicketInfo(help.hid, help);
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        /* empty */
+      }
+
+      assert.strictEqual(await model.loadHelpTicketInfo(help.hid), null);
+    });
+
+    it('suppressed errors during reverting', async function() {
+      let err;
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.popSP();
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        assert(e.suppressed);
+        assert(e.suppressed.dberror);
+      }
+    });
+
+    it('suppressed errors during reverting 2', async function() {
+      let err;
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.releaseSP();
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        assert(e.suppressed);
+        assert(e.suppressed.dberror);
+      }
+    });
   });
 
   describe('query', function() {
@@ -115,6 +166,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     type UserFilt<T> = (u: utyp.User) => T;
     describe('user', function() {
       // Various filters to see different views of a user
+      /* eslint-disable @typescript-eslint/explicit-function-return-type */
       const utdFilt = (uu: utyp.User) => (uu.isUtd && uu.utd);
       const empFilt = (uu: utyp.User) => (uu.isEmployee && uu.employee);
       const stuFilt = (uu: utyp.User) => (uu.isUtd &&
@@ -123,6 +175,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         uu.utd.uType == utypes.FACULTY && uu.utd.faculty);
       const staffFilt = (uu: utyp.User) => (uu.isUtd &&
         uu.utd.uType == utypes.STAFF && uu.utd.staff);
+      /* eslint-enable @typescript-eslint/explicit-function-return-type */
 
       /**
        * Iterate through each user, filtering/modifying each user based on the
@@ -246,7 +299,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
 
       describe('Employee', function() {
-        const should = ['worksAt', 'password'];
+        const should = ['worksAt', 'password', 'oneTimePass'];
         const maybe = ['uid'];
         it('should exist', exists(empFilt));
         checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
@@ -284,27 +337,25 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     });
   });
-
+  type AlterSpec = [etyp.Tables2, etyp.ID, {[P: string]: any}];
+  const alters: AlterSpec[] = [
+    ['Company', 'Shufflebeat', {logo: 'abcde'}],
+    ['Employee', 1, {password: 'abcde'}],
+    ['HelpTicket', 1, {requestor: 1}],
+    ['Project', 1, {advisor: 1}],
+    ['Student', 0, {major: 'no nonsense'}],
+    ['Team', 39, {leader: 3}],
+    ['UTD', 1, {isAdmin: true}],
+    ['User', 0, {fname: 'John'}],
+    ['Invite', 1337, {managerEmail: 'test@gmail.com'}],
+    ['Faculty', 1, null],
+  ];
   describe('update', function() {
-    type AlterSpec = [dtyp.Tables2, string|number, {[P: string]: any}];
-    const alters: AlterSpec[] = [
-      ['Company', 'Shufflebeat', {logo: 'abcde'}],
-      ['Employee', 1, {password: 'abcde'}],
-      ['HelpTicket', 1, {requestor: 1}],
-      ['Project', 1, {advisor: 1}],
-      ['Student', 0, {major: 'no nonsense'}],
-      ['Team', 39, {leader: 3}],
-      ['UTD', 1, {isAdmin: true}],
-      ['User', 0, {fname: 'John'}],
-    ];
-
-    // beforeEach(async function() {
-    //   await loadIntoDB(model);
-    // });
-
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
+
+      if (changes === null) continue;
 
       describe(mth, function() {
         it('can partial update', async function() {
@@ -317,7 +368,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
         });
         it('should not change if invalid ID', async function() {
           const init = Object.assign({}, await model[load](uid));
-          const bad = (util.isNumber(uid) ? 1337 : '1337');
+          const bad = (util.isNumber(uid) ? 9001 : '9001');
           assert(!(await model[alter](bad, changes)), 'Changes made!');
           const after = Object.assign({}, await model[load](uid));
           assert.deepStrictEqual(after, init);
@@ -327,6 +378,63 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
           assert(!(await model[alter](uid, {fake: 'fake'})), 'Changes made!');
           const after = Object.assign({}, await model[load](uid));
           assert.deepStrictEqual(after, init);
+        });
+      });
+    }
+  });
+  describe('delete', function() {
+    for (const [mth, uid] of alters) {
+      const deleteFunc = `delete${mth}`;
+      const load = `load${mth}Info`;
+      describe(mth, function() {
+        it('should not delete if invalid ID', async function() {
+          const bad = (util.isNumber(uid) ? 9001 : '9001');
+          assert(!(await model[deleteFunc](bad)));
+        });
+        it('should delete if valid ID', async function() {
+          await model.doNestedTransaction(async () => {
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
+            assert(await model[load](uid));
+            assert(await model[deleteFunc](uid));
+            assert(isNull((await model[load](uid))));
+            return false;
+          });
+        });
+        it('should delete all if null is passed', async function() {
+          await model.doNestedTransaction(async () => {
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
+            assert((await model[load](uid)));
+            assert((await model[deleteFunc](null)));
+            assert(isNull((await model[load](uid))));
+            return false;
+          });
+        });
+      });
+    }
+  });
+  describe('findAll', function() {
+    for (const [mth] of alters) {
+      const deleteFunc = `delete${mth}`;
+      const findAll = `findAll${mth}s`;
+      describe(mth, function() {
+        it('should not be empty', async function() {
+          const findAllRes = await model[findAll]();
+          assert(findAllRes.length);
+        });
+        it('should be empty after null purge', async function() {
+          await model.doNestedTransaction(async () => {
+            if (mth === 'Company') {
+              assert(await model.deleteEmployee(null));
+            }
+            assert((await model[deleteFunc](null)));
+            const postDelete = await model[findAll]();
+            assert(!(postDelete.length));
+            return false;
+          });
         });
       });
     }
@@ -347,5 +455,4 @@ describe('model', async function() {
 
   describe('mysql', verifyModel.bind(this, sqldb));
 });
-
 // TODO: test partial updates

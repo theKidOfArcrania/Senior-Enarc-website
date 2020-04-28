@@ -109,6 +109,10 @@ dist
 .idea
 *.sw?
 
+# Justin Modification: Attempted to fix ELF Header Error on windows for testing
+.gitignore
+node_modules
+
 upload
 sessions
 output

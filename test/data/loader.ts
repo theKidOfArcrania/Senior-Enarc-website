@@ -1,20 +1,11 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as util from '../../lib/util';
-import type * as tents from '../../lib/model/enttypes';
-import type * as typ from '../../lib/model/dbtypes';
+import * as tent from '../../lib/model/enttypes';
 
-const tables: [keyof tents.DB, typ.Tables2, string][] = [
-  ['COMPANY', 'Company', 'name'],
-  ['USER', 'User', 'userID'],
-  ['EMPLOYEE', 'Employee', 'euid'],
-  ['UTD_PERSONNEL', 'UTD', 'uid'],
-  ['FACULTY', 'Faculty', 'fuid'],
-  ['STUDENT', 'Student', 'suid'],
-  ['PROJECT', 'Project', 'projID'],
-  ['TEAM', 'Team', 'tid'],
-  ['HELP_TICKET', 'HelpTicket', 'hid'],
-  ['INVITE', 'Invite', 'inviteID']];
+const insertOrder: tent.Tables[] =
+  ['COMPANY', 'USER', 'EMPLOYEE', 'UTD_PERSONNEL', 'FACULTY', 'STUDENT',
+    'PROJECT', 'TEAM', 'HELP_TICKET', 'INVITE'];
 
 const foreignKeys = {
   Student: ['memberOf'],
@@ -25,29 +16,30 @@ const foreignKeys = {
 // Load test data
 type ArrayElement<T> = T extends (infer Ele)[] ? Ele : T;
 type Mapped<T> = {[Tbl in keyof T]?: Map<string|number, ArrayElement<T[Tbl]>>};
-const ents: tents.DB = {
+const ents: tent.DB = {
   USER: [], PROJECT: [], UTD_PERSONNEL: [], FACULTY: [], STUDENT: [],
   EMPLOYEE: [], COMPANY: [], TEAM: [], HELP_TICKET: [], INVITE: [],
 };
-export const db: Mapped<tents.DB> = {};
+export const db: Mapped<tent.DB> = {};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-for (const [tbl, _, key] of tables) {
+for (const tbl of insertOrder) {
+  const key = tent.getPrimaryKey(tbl);
   ents[tbl] = JSON.parse(fs.readFileSync(`test/data/${tbl}.json`, 'utf8'));
   const t = db[tbl] = new Map();
   for (const ent of ents[tbl]) {
     t.set(ent[key], ent);
     if (tbl === 'PROJECT') {
-      (ent as tents.Project).skillsReq.sort(util.caseInsensOrder);
+      (ent as tent.Project).skillsReq.sort(util.caseInsensOrder);
     } else if (tbl === 'TEAM') {
-      const t = ent as tents.Team;
+      const t = ent as tent.Team;
       if (!t.choices) t.choices = [];
       t.choices = t.choices.concat(Array(6).fill(null)).slice(0, 6);
     } else if (tbl === 'STUDENT') {
-      (ent as tents.Student).skills.sort(util.caseInsensOrder);
+      (ent as tent.Student).skills.sort(util.caseInsensOrder);
     } else if (tbl === 'INVITE') {
-      (ent as tents.Invite).expiration =
-          new Date((ent as tents.Invite).expiration);
+      (ent as tent.Invite).expiration =
+          new Date((ent as tent.Invite).expiration);
     }
   }
 }
@@ -58,14 +50,21 @@ for (const [tbl, _, key] of tables) {
  * @param dbinst - the DB instance to load into
  */
 export default async function loadIntoDB(dbinst): Promise<void> {
-  const alters: {[P in typ.Tables2]?: [typ.Tables2, {[P: string]: string}][]} =
-    {};
+  type DeferEnt = [tent.Tables2, {[P: string]: string}];
+  const alters: {[P in tent.Tables2]?: DeferEnt[]} = {};
   for (const tbl of Object.keys(foreignKeys)) {
     alters[tbl] = [];
   }
 
   await dbinst.clear();
-  for (const [tbl, name, pkey] of tables) {
+  for (const tbl of insertOrder) {
+    const name = tent.schemas[tbl].mthname;
+    const pkey = tent.getPrimaryKey(tbl);
+    if (util.isNull(name)) {
+      assert.fail(`Entity ${tbl} does not have a insert function`);
+      return;
+    }
+
     for (const ent of ents[tbl]) {
       const ent2 = Object.assign({}, ent);
       if (name in foreignKeys) {

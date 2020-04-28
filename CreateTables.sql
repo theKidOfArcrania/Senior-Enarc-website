@@ -22,6 +22,7 @@ create table Employee (
   euid int NOT NULL,
   worksAt varchar(50) NOT NULL,
   password varchar(100) NOT NULL,
+  oneTimePass boolean NOT NULL,
   PRIMARY KEY (euid),
   FOREIGN KEY (euid) references Users(userID) ON UPDATE CASCADE ON DELETE CASCADE,
   FOREIGN KEY (worksAt) references Company(name) ON UPDATE CASCADE

@@ -1,14 +1,7 @@
 import * as crypto from 'crypto';
 import {promisify, Some, isNull} from '../util';
-import type * as ent from './enttypes';
+import * as ent from './enttypes';
 
-export type Tables = 'USER' | 'PROJECT' | 'UTD_PERSONNEL' | 'FACULTY' |
-  'STUDENT' | 'EMPLOYEE' | 'COMPANY' | 'FACULTY_OR_TEAM' | 'TEAM' | 'CHOICE' |
-  'HELP_TICKET' | 'INVITE';
-
-export type Tables2 = 'User' | 'Project' | 'UTD' | 'Faculty' | 'Student' |
-  'Employee' | 'Company' | 'FacultyOrTeam' | 'Team' | 'Choice' | 'HelpTicket' |
-  'Invite';
 
 export type Entity = {[P: string]: any};
 
@@ -325,11 +318,7 @@ export abstract class DatabaseTransaction<DB> {
   abstract async archiveAllProjects(): Promise<void>;
 
   /** Fast method for deleting all student users. */
-  async deleteAllStudents(): Promise<void> {
-    for (const id of await this.findAllStudents()) {
-      await this.deleteStudent(id);
-    }
-  }
+  abstract async deleteAllStudents(): Promise<void>;
 
   /* ************************************
    * FIND ALL ENTITIES
@@ -339,7 +328,7 @@ export abstract class DatabaseTransaction<DB> {
    * Finds all the entities in the database of a specific type
    * @param entity - the name of the entity
    */
-  abstract async _findAllEntities(entity: Tables): Promise<string[]>;
+  abstract async _findAllEntities(entity: ent.Tables): Promise<string[]>;
 
   /**
    * Finds all the project IDs that exist in the database.
@@ -544,7 +533,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param tableName - the table entity name
    * @param id - the id
    */
-  abstract async _deleteEntity(tableName: Tables, id: Some<number|string>):
+  abstract async _deleteEntity(tableName: ent.Tables, id: Some<ent.ID>):
       Promise<boolean>;
 
   /**
@@ -649,13 +638,11 @@ export abstract class DatabaseTransaction<DB> {
    * if the insert is successful
    *
    * @param tableName - the table entity name
-   * @param attribs - a key-value dict of attributes and default vals.
-   * @param pkey - the name of the primary key
    * @param id - the id
    * @param info - the attributes of the entity
    */
-  abstract async _insertEntity(tableName: Tables, attribs: object,
-      pkey: string, id: string|number, info: object): Promise<boolean>;
+  abstract async _insertEntity(tableName: ent.Tables, id: ent.ID,
+      info: object): Promise<boolean>;
 
   /**
    * Inserts Project
@@ -664,10 +651,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertProjectInfo(projID, projInfo): Promise<boolean> {
     await this.checkValid();
-    if (!(await this._insertEntity('PROJECT', {pName: null, image: null,
-      pDesc: null, mentor: null, sponsor: null, advisor: null, status: null,
-      visible: null, projDoc: null, company: null}, 'projID', projID,
-    projInfo))) return false;
+    if (!(await this._insertEntity('PROJECT', projID, projInfo))) return false;
     if (projInfo.skillsReq && projInfo.skillsReq.length) {
       await this.addSkillsReq(projID, ...projInfo.skillsReq);
     }
@@ -681,9 +665,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertUserInfo(uid, userinfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('USER', {fname: null, lname: null,
-      email: null, address: null, isUtd: null, isEmployee: null}, 'userID',
-    uid, userinfo);
+    return this._insertEntity('USER', uid, userinfo);
   }
 
   /**
@@ -693,8 +675,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertUTDInfo(uid, userinfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('UTD_PERSONNEL', {uType: null, netID: null,
-      isAdmin: null}, 'uid', uid, userinfo);
+    return this._insertEntity('UTD_PERSONNEL', uid, userinfo);
   }
 
   /**
@@ -704,8 +685,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertStudentInfo(uid, userinfo): Promise<boolean> {
     await this.checkValid();
-    if (!(await this._insertEntity('STUDENT', {major: null, resume: null,
-      memberOf: null}, 'suid', uid, userinfo))) return false;
+    if (!(await this._insertEntity('STUDENT', uid, userinfo))) return false;
     if (userinfo.skills && userinfo.skills.length) {
       await this.addSkills(uid, ...userinfo.skills);
     }
@@ -720,11 +700,10 @@ export abstract class DatabaseTransaction<DB> {
   async insertFacultyInfo(uid, userinfo): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
-      if (!(await _this._insertEntity('FACULTY_OR_TEAM', {isRegTeam: false},
-          'teamID', userinfo.tid, {}))) return false;
+      if (!(await _this._insertEntity('FACULTY_OR_TEAM', userinfo.tid,
+          {isRegTeam: false}))) return false;
 
-      if (!(await this._insertEntity('FACULTY', {tid: null}, 'fuid',
-          uid, userinfo))) return false;
+      if (!(await this._insertEntity('FACULTY', uid, userinfo))) return false;
 
       await this.setChoices(userinfo.tid, Array(6).fill(null));
       return true;
@@ -738,9 +717,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertEmployeeInfo(uid, userinfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('EMPLOYEE', {worksAt: null,
-      password: null},
-    'euid', uid, userinfo);
+    return this._insertEntity('EMPLOYEE', uid, userinfo);
   }
 
   /**
@@ -751,13 +728,10 @@ export abstract class DatabaseTransaction<DB> {
   async insertTeamInfo(tid, teamInfo): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
-      if (!(await _this._insertEntity('FACULTY_OR_TEAM', {isRegTeam: true},
-          'teamID', tid, {}))) return false;
+      if (!(await _this._insertEntity('FACULTY_OR_TEAM', tid,
+          {isRegTeam: true}))) return false;
 
-      if (!(await _this._insertEntity('TEAM', {assignedProj: null,
-        budget: 0, leader: null, tid: null, password: null, comments: null,
-        name: null, membLimit: 5},
-      'tid', tid, teamInfo))) return false;
+      if (!(await _this._insertEntity('TEAM', tid, teamInfo))) return false;
 
       const choices = teamInfo.choices.concat(Array(6).fill(null)).slice(0, 6);
       await _this.setChoices(tid, choices);
@@ -772,8 +746,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertCompanyInfo(cName, compInfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('COMPANY', {logo: null, manager: null},
-        'name', cName, compInfo);
+    return this._insertEntity('COMPANY', cName, compInfo);
   }
 
   /**
@@ -783,8 +756,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertHelpTicketInfo(hid, ticketInfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('HELP_TICKET', {hStatus: null,
-      hDescription: null, requestor: null}, 'hid', hid, ticketInfo);
+    return this._insertEntity('HELP_TICKET', hid, ticketInfo);
   }
 
   /**
@@ -794,9 +766,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async insertInviteInfo(inviteID, inviteInfo): Promise<boolean> {
     await this.checkValid();
-    return this._insertEntity('INVITE', {expiration: null, company: null,
-      managerFname: null, managerLname: null, managerEmail: null}, 'inviteID',
-    inviteID, inviteInfo);
+    return this._insertEntity('INVITE', inviteID, inviteInfo);
   }
 
   /* ************************************
@@ -810,7 +780,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param id - unique identifier for the entity
    * @param tblname - table name
    */
-  abstract async _loadEntity(id: number|string, tblname: Tables):
+  abstract async _loadEntity(id: ent.ID, tblname: ent.Tables):
     Promise<Some<Entity>>;
 
   /**
@@ -856,7 +826,10 @@ export abstract class DatabaseTransaction<DB> {
    */
   async loadEmployeeInfo(uid: number): Promise<Some<ent.Employee>> {
     await this.checkValid();
-    return this._loadEntity(uid, 'EMPLOYEE') as Promise<Some<ent.Employee>>;
+    const val = await this._loadEntity(uid, 'EMPLOYEE') as Some<ent.Employee>;
+    if (isNull(val)) return null;
+    val.oneTimePass = !!val.oneTimePass;
+    return val;
   }
 
   /**
@@ -935,14 +908,12 @@ export abstract class DatabaseTransaction<DB> {
    * with a given whitelist and given the entity's name and the name of its ID
    * If successful, this will return true
    *
-   * @param whiteList - list of attributes that can be changed
    * @param ID - value of ID being search for
    * @param changes - key/value pairs of attributes and new values
    * @param entity - name of the entity being modified
-   * @param entityID - name of the ID of the entity being modified
    */
-  abstract async _alterEntity(whiteList: string[], ID: string|number,
-    changes: Entity, entity: Tables, entityID: string): Promise<boolean>;
+  abstract async _alterEntity(entity: ent.Tables, ID: ent.ID,
+      changes: Entity): Promise<boolean>;
 
   /**
    * Alters user info associated with the uid using changes after filtering
@@ -951,9 +922,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterUserInfo(uid, changes): Promise<boolean> {
     await this.checkValid();
-    const userWhiteList = ['fname', 'lname', 'email', 'address', 'isUTD',
-      'isEmployee'];
-    return this._alterEntity(userWhiteList, uid, changes, 'USER', 'userID');
+    return this._alterEntity('USER', uid, changes);
   }
   /**
    * Alters project info associated with the pid using changes after filtering
@@ -962,10 +931,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterProjectInfo(pid, changes): Promise<boolean> {
     await this.checkValid();
-    const projWhiteList = ['pName', 'image', 'projDoc', 'pDesc', 'mentor',
-      'sponsor', 'advisor', 'status', 'visible', 'company'];
-    return this._alterEntity(projWhiteList, pid, changes,
-        'PROJECT', 'projID');
+    return this._alterEntity('PROJECT', pid, changes);
   }
   /**
    * Alters UTD personnel info associated with the uid
@@ -975,9 +941,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterUTDInfo(uid, changes): Promise<boolean> {
     await this.checkValid();
-    const utdWhiteList = ['uType', 'netID', 'isAdmin'];
-    return this._alterEntity(utdWhiteList, uid, changes,
-        'UTD_PERSONNEL', 'uid');
+    return this._alterEntity('UTD_PERSONNEL', uid, changes);
   }
   /**
    * Alters student info associated with the uid using changes after filtering
@@ -986,9 +950,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterStudentInfo(uid, changes): Promise<boolean> {
     await this.checkValid();
-    const studentWhiteList = ['major', 'resume', 'memberOf'];
-    return this._alterEntity(studentWhiteList, uid, changes,
-        'STUDENT', 'suid');
+    return this._alterEntity('STUDENT', uid, changes);
   }
   /**
    * Alters employee info associated with the uid using changes after filtering
@@ -997,9 +959,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterEmployeeInfo(uid, changes): Promise<boolean> {
     await this.checkValid();
-    const employeeWhiteList = ['worksAt', 'password'];
-    return this._alterEntity(employeeWhiteList, uid, changes,
-        'EMPLOYEE', 'euid');
+    return this._alterEntity('EMPLOYEE', uid, changes);
   }
   /**
    * Alters company info associated with the name using changes after filtering
@@ -1008,9 +968,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterCompanyInfo(name, changes): Promise<boolean> {
     await this.checkValid();
-    const companyWhiteList = ['logo', 'manager'];
-    return this._alterEntity(companyWhiteList, name, changes,
-        'COMPANY', 'name');
+    return this._alterEntity('COMPANY', name, changes);
   }
 
   /**
@@ -1020,10 +978,7 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterInviteInfo(inviteID, changes): Promise<boolean> {
     await this.checkValid();
-    const invitationAttrib = ['expiration', 'company', 'managerFname',
-      'managerLname', 'managerEmail'];
-    return (await this._alterEntity(invitationAttrib, inviteID, changes,
-        'INVITE', 'inviteID'));
+    return this._alterEntity('INVITE', inviteID, changes);
   }
 
   /**
@@ -1033,12 +988,9 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterTeamInfo(tid, changes): Promise<boolean> {
     await this.checkValid();
-    const teamWhiteList = ['assignedProj', 'budget', 'leader', 'password',
-      'comments', 'name', 'membLimit'];
     return this.doNestedTransaction(async (_this) => {
       if (changes.choices) await _this.setChoices(tid, changes.choices);
-      return (await _this._alterEntity(teamWhiteList, tid, changes,
-          'TEAM', 'tid'));
+      return _this._alterEntity('TEAM', tid, changes);
     }, this);
   }
 
@@ -1050,8 +1002,6 @@ export abstract class DatabaseTransaction<DB> {
    */
   async alterHelpTicketInfo(hid, changes): Promise<boolean> {
     await this.checkValid();
-    const helpTicketWhiteList = ['hStatus', 'hDescription', 'requestor'];
-    return (await this._alterEntity(helpTicketWhiteList, hid, changes,
-        'HELP_TICKET', 'hid'));
+    return this._alterEntity('HELP_TICKET', hid, changes);
   }
 }

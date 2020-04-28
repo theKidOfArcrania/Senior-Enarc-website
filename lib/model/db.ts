@@ -1,6 +1,8 @@
-import {copyAttribs, range, Reentrant, deepJSONCopy, Some} from '../util';
+import {copyAttribs, range, Reentrant, deepJSONCopy, Some, isNullOrUndefined}
+  from '../util';
 
 import * as typ from './dbtypes';
+import * as ent from './enttypes';
 
 // Simulating foreign keys
 const foreignKeys: { [P: string]: [string, string, null|boolean][]} = {
@@ -50,9 +52,10 @@ for (const [tblPri, fkeys] of Object.entries(foreignKeys)) {
   }
 }
 
+type OurTables = keyof ent.DB | 'CHOICE' | 'FACULTY_OR_TEAM';
 
 type DBTable = {[P: string]: any};
-type MemDB = {[P in typ.Tables]: DBTable};
+type MemDB = {[P in OurTables]: DBTable};
 
 type Savepoints = [string, MemDB][] & {names: {[P: string]: number}};
 
@@ -160,11 +163,10 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    */
   async clear(): Promise<void> {
     await this.checkValid();
-    this._db = {
-      USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-      STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
-      CHOICE: {}, HELP_TICKET: {}, INVITE: {},
-    };
+    this._db = {} as MemDB;
+    for (const key of Object.keys(ent.schemas)) {
+      this._db[key] = {};
+    }
   }
 
   /** Fast method for deleting all student users. */
@@ -194,7 +196,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
     let ret = Object.keys(this._db[entity]);
     if (entity === 'INVITE') {
       ret = ret.filter((k) =>
-        this._db.INVITE[k].expiration.valueOf() >= Date.now());
+        new Date(this._db.INVITE[k].expiration).valueOf() >= Date.now());
     }
     return ret;
   }
@@ -374,7 +376,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
       await this.pushSP();
       try {
         for (const id2 of Object.keys(this._db[tableName])) {
-          await this._deleteEntity(tableName, id2);
+          let id3: ent.ID = id2;
+          if (tableName !== 'COMPANY') id3 = parseInt(id2);
+          await this._deleteEntity(tableName, id3);
         }
       } catch (e) {
         await this.popSP();
@@ -393,7 +397,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
       const fkeys = foreignKeys[tableName] || [];
       try {
         for (const [tbl, fkey, dmode] of fkeys) {
-          for (const [k, v] of Object.entries(this._db[tbl])) {
+          for (const [kk, v] of Object.entries(this._db[tbl])) {
+            let k: ent.ID = kk;
+            if (tbl !== 'COMPANY') k = parseInt(kk);
             if (v[fkey] === id) {
               if (dmode === null) { // ON DELETE SET NULL
                 v[fkey] = null;
@@ -403,6 +409,8 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
                 throw new typ.DBError('Foreign key constraint failure on ' +
                   `\`${tbl}\`.\`${fkey}\``);
               }
+            } else {
+              if (v[fkey] == id) throw new Error(JSON.stringify([v[fkey], id]));
             }
           }
         }
@@ -428,20 +436,19 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * if the insert is successful
    *
    * @param tableName - the table entity name
-   * @param attribs - a key-value dict of attributes and default vals.
-   * @param pkey - the name of the primary key
    * @param id - the id
    * @param info - the attributes of the entity
    */
-  async _insertEntity(tableName, attribs, pkey, id, info): Promise<boolean> {
-    info = copyAttribs({}, info, attribs);
-    info[pkey] = id;
+  async _insertEntity(tableName: ent.Tables, id, info): Promise<boolean> {
+    info = copyAttribs({}, info, ent.getFields(tableName,
+        ent.FieldType.REGULAR));
+    info[ent.getPrimaryKey(tableName)] = id;
     if (id in this._db[tableName]) {
       return false;
     } else {
       const fkeys = foreignKeysR[tableName] || [];
       for (const [fkey, tblPri, _] of fkeys) { // eslint-disable-line
-        if (info[fkey] === null) continue;
+        if (isNullOrUndefined(info[fkey])) continue;
         if (!(info[fkey] in this._db[tblPri])) {
           throw new typ.DBError('Foreign key constraint error on ' +
             `\`${tableName}\`.\`${fkey}\``);
@@ -462,7 +469,9 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
   async _loadEntity(id, tblname): Promise<Some<typ.Entity>> {
     const tbl = this._db[tblname];
     if (id in tbl) {
-      return Object.assign({}, tbl[id]);
+      const ret = Object.assign({}, tbl[id]);
+      if (tblname === 'INVITE') ret.expiration = new Date(ret.expiration);
+      return ret;
     } else {
       return null;
     }
@@ -475,17 +484,15 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * with a given whitelist and given the entity's name and the name of its ID
    * If successful, this will return true
    *
-   * @param whiteList - list of attributes that can be changed
+   * @param entity - name of the entity being modified
    * @param ID - value of ID being search for
    * @param changes - key/value pairs of attributes and new values
-   * @param entity - name of the entity being modified
-   * @param entityID - name of the ID of the entity being modified
    */
-  async _alterEntity(whiteList, ID, changes, entity):
+  async _alterEntity(entity, ID, changes):
       Promise<boolean> {
     const acceptedChanges = {};
     let hasChanges = false;
-    for (const key of whiteList) {
+    for (const key of ent.getFields(entity, ent.FieldType.REGULAR)) {
       if (key in changes) {
         acceptedChanges[key] = changes[key];
         hasChanges = true;
@@ -512,11 +519,10 @@ export default class MemDatabase extends typ.Database<MemDB> {
     super();
 
     this._lock = new Reentrant();
-    this._db = {
-      USER: {}, PROJECT: {}, UTD_PERSONNEL: {}, FACULTY: {},
-      STUDENT: {}, EMPLOYEE: {}, COMPANY: {}, FACULTY_OR_TEAM: {}, TEAM: {},
-      CHOICE: {}, HELP_TICKET: {}, INVITE: {},
-    };
+    this._db = {} as MemDB;
+    for (const key of Object.keys(ent.schemas)) {
+      this._db[key] = {};
+    }
   }
 
   /**
