@@ -439,19 +439,25 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
-  type SearchSpec = [etyp.Tables2, etyp.ID, string];
+  type SearchSpec = [etyp.Tables2, etyp.ID, string, etyp.ID];
   const search: SearchSpec[] = [
-    ['User', 'adowley0@myspace.com', 'Email'],
-    ['Team', 'Looking for another member if possible!', 'Name'],
+    ['User', 'adowley0@myspace.com', 'Email', 0],
+    ['Team', 'Group 16', 'Name', 16],
   ];
   describe('search', function() {
-    for (const [mth, query, queryTitle] of search) {
+    for (const [mth, query, queryTitle, correct] of search) {
       const load = `load${mth}Info`;
       const searchFunc = `search${mth}By${queryTitle}`;
 
       describe(mth, function() {
-        it('fails on searching bad ID', async function() {
-          assert(isNull(await model[searchFunc](query)));
+        it('returns null on searching bad ID', async function() {
+          assert(isNull(await model[searchFunc](9001)));
+        });
+      });
+      describe(mth, function() {
+        it('correct ID retrieved from search', async function() {
+          const result = await model[searchFunc](query);
+          assert.deepStrictEqual(result, correct);
         });
       });
     }
