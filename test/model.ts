@@ -88,6 +88,55 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       await model.restoreSP();
       assert(!(await model.alterHelpTicketInfo(help.hid, {hStatus: 'closed'})));
     });
+
+    it('error within doTransaction reverts', async function() {
+      let err;
+      const help = {
+        hid: 71337,
+        hStatus: 'open',
+        hDescription: 'Hello world!',
+        requestor: 0,
+      };
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.insertHelpTicketInfo(help.hid, help);
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        /* empty */
+      }
+
+      assert.strictEqual(await model.loadHelpTicketInfo(help.hid), null);
+    });
+
+    it('suppressed errors during reverting', async function() {
+      let err;
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.popSP();
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        assert(e.suppressed);
+        assert(e.suppressed.dberror);
+      }
+    });
+
+    it('suppressed errors during reverting 2', async function() {
+      let err;
+      try {
+        await model.doNestedTransaction(async () => {
+          await model.releaseSP();
+          err = new Error();
+          throw err;
+        });
+      } catch (e) {
+        assert(e.suppressed);
+        assert(e.suppressed.dberror);
+      }
+    });
   });
 
   describe('query', function() {
@@ -299,11 +348,14 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     ['UTD', 1, {isAdmin: true}],
     ['User', 0, {fname: 'John'}],
     ['Invite', 1337, {managerEmail: 'test@gmail.com'}],
+    ['Faculty', 1, null],
   ];
   describe('update', function() {
     for (const [mth, uid, changes] of alters) {
       const load = `load${mth}Info`;
       const alter = `alter${mth}Info`;
+
+      if (changes === null) continue;
 
       describe(mth, function() {
         it('can partial update', async function() {

@@ -318,11 +318,7 @@ export abstract class DatabaseTransaction<DB> {
   abstract async archiveAllProjects(): Promise<void>;
 
   /** Fast method for deleting all student users. */
-  async deleteAllStudents(): Promise<void> {
-    for (const id of await this.findAllStudents()) {
-      await this.deleteStudent(id);
-    }
-  }
+  abstract async deleteAllStudents(): Promise<void>;
 
   /* ************************************
    * FIND ALL ENTITIES

@@ -61,14 +61,6 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
 
 
   /**
-   * Make the actual connection to the remote SQL instance.
-   */
-  async _connect(): Promise<void> {
-    this.pcon.connect;
-    await this._wrap(this.pcon.connect);
-  }
-
-  /**
    * Makes a mysql query, wrapping any errors as a db-caused error.
    * @param qstr - the query string
    * @param args - the array list of arguments.
@@ -134,7 +126,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
   async _wrap<Args extends any[], Ret>(fn: (...args: Args) => Promise<Ret>,
       ...params: Args): Promise<Ret> {
     try {
-      return fn(...params);
+      return await fn(...params);
     } catch (e) {
       e.dberror = true;
       throw e;
