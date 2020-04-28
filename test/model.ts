@@ -10,6 +10,7 @@ import * as util from '../lib/util';
 
 import * as dtyp from '../lib/model/dbtypes';
 import * as utyp from '../lib/model/usertypes';
+import * as etyp from '../lib/model/enttypes';
 import {UTDType as utypes} from '../lib/model/enttypes';
 
 import * as loader from './data/loader';
@@ -247,7 +248,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
 
       describe('Employee', function() {
-        const should = ['worksAt', 'password'];
+        const should = ['worksAt', 'password', 'oneTimePass'];
         const maybe = ['uid'];
         it('should exist', exists(empFilt));
         checkUserProps(it, empFilt, db2.EMPLOYEE, should, maybe);
@@ -286,7 +287,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     });
   });
   describe('update', function() {
-    type AlterSpec = [dtyp.Tables2, string|number, {[P: string]: any}];
+    type AlterSpec = [etyp.Tables2, string|number, {[P: string]: any}];
     const alters: AlterSpec[] = [
       ['Company', 'Shufflebeat', {logo: 'abcde'}],
       ['Employee', 1, {password: 'abcde'}],

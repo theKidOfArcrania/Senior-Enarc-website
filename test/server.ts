@@ -117,7 +117,7 @@ describe('server', function() {
    * @param user - the normalized user object
    */
   function getCredsFromUser(user): utyp.UTDPersonnel & utyp.User {
-    return util.copyAttribs({}, user, {
+    return util.copyAttribsDef({}, user, {
       isAdmin: false, isEmployee: null, isUtd: null, uType: null,
     }) as utyp.UTDPersonnel & utyp.User;
   }

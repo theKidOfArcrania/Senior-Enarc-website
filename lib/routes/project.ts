@@ -103,8 +103,8 @@ async function loadUser<T>(tr: DBTrans<T>, uid: Some<number>):
 
   const u = new CUser(uid);
   await u.reload(tr);
-  return util.copyAttribs({}, u, {'uid': null, 'fname': null, 'lname': null,
-    'email': null}) as ent.Users;
+  return util.copyAttribs({}, u, ['uid', 'fname', 'lname', 'email']) as
+      ent.Users;
 }
 
 /**
@@ -130,9 +130,8 @@ async function loadProject<T>(tr: DBTrans<T>, u: User, pid: number):
   if (access === Access.FULL) {
     pret = p;
   } else {
-    pret = util.copyAttribs({}, p, {'projID': null, 'pName': null,
-      'image': null, 'pDesc': null, 'sponsor': null, 'advisor': null,
-      'company': null});
+    pret = util.copyAttribs({}, p, ['projID', 'pName', 'image', 'pDesc',
+      'sponsor', 'advisor', 'company']);
   }
   return pret;
 }
