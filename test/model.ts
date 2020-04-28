@@ -446,7 +446,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
   ];
   describe('search', function() {
     for (const [mth, query, queryTitle, correct] of search) {
-      const load = `load${mth}Info`;
       const searchFunc = `search${mth}By${queryTitle}`;
 
       describe(mth, function() {
@@ -468,7 +467,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     ['TeamChoices', 16, [16, 50, 33, 28, 37, 14]],
     ['ManagesProject', 4, [5, 13, 28, 37]],
   ];
-  //      ['ManagesProject', 'Group 16', [16]],
   describe('find', function() {
     for (const [mth, query, correct] of finders) {
       const findFunc = `find${mth}`;
@@ -482,6 +480,29 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       describe(mth, function() {
         it('correct members retrieved from find', async function() {
           const result = await model[findFunc](query);
+          assert.deepStrictEqual(result, correct);
+        });
+      });
+    }
+  });
+  type GetSpec = [string, etyp.ID, {readonly [x: number]: any }];
+  const getters: FindSpec[] = [
+    ['Skills', 16, ['CMMI', 'BWA', 'Gstreamer']],
+    ['SkillsReq', 47, ['Image Editing']],
+  ];
+  describe('get', function() {
+    for (const [mth, query, correct] of getters) {
+      const getFunc = `get${mth}`;
+
+      describe(mth, function() {
+        it('returns null on getting bad ID', async function() {
+          assert((await model[getFunc](1337)),
+              'TypeError: Cannot read property \'' + mth + '\' of undefined');
+        });
+      });
+      describe(mth, function() {
+        it('correct skills retrieved from get', async function() {
+          const result = await model[getFunc](query);
           assert.deepStrictEqual(result, correct);
         });
       });
