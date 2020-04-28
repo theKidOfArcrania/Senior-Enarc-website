@@ -462,6 +462,31 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
+  type FindSpec = [string, etyp.ID, {readonly [x: number]: any }];
+  const finders: FindSpec[] = [
+    ['MembersOfTeam', 39, [0, 3]],
+    ['TeamChoices', 16, [16, 50, 33, 28, 37, 14]],
+    ['ManagesProject', 4, [5, 13, 28, 37]],
+  ];
+  //      ['ManagesProject', 'Group 16', [16]],
+  describe('find', function() {
+    for (const [mth, query, correct] of finders) {
+      const findFunc = `find${mth}`;
+
+      describe(mth, function() {
+        it('returns null on finding bad ID', async function() {
+          const result = await model[findFunc](1337);
+          assert((!(result.length)));
+        });
+      });
+      describe(mth, function() {
+        it('correct members retrieved from find', async function() {
+          const result = await model[findFunc](query);
+          assert.deepStrictEqual(result, correct);
+        });
+      });
+    }
+  });
   describe('bulk ops', function() {
     describe('Student Purge', function() {
       it('no remaining students after purge', async function() {
@@ -474,7 +499,6 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     });
     describe('Project Archive', function() {
-
       it('no remaining projects after archiving', async function() {
         await model.doNestedTransaction(async () => {
           assert(await model[`archiveAllProjects`]());
