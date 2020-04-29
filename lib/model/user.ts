@@ -170,6 +170,16 @@ export class Employee extends Uent implements typ.Employee {
     delete res.euid;
     Object.assign(this, res);
   }
+
+  /**
+   * This normalization will also destroy the password hash so that way that
+   * never gets leaked out when we send it to the client
+   */
+  normalize(): this {
+    const res = super.normalize();
+    delete res.password; // Don't ever leak sensitive password hash!
+    return res;
+  }
 }
 
 /**

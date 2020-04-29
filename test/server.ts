@@ -7,6 +7,7 @@ import {CookieAccessInfo as cookacc} from 'cookiejar';
 
 import type msg from '../lib/msg';
 import * as ent from '../lib/model/enttypes';
+import * as db from '../lib/model/db';
 import * as loader from '../test/data/loader';
 import type * as utyp from '../lib/model/usertypes';
 import config from '../lib/config';
@@ -738,26 +739,35 @@ describe('server', function() {
       });
     };
     describe('/company', function() {
-      chkNonEmps(it, json.get, '/company');
+      chkNonEmps(it, json.get, '/api/v1/company');
     });
     describe('/company/people', function() {
       describe('GET', function() {
-        chkNonEmps(it, json.get, '/company/people?id=3');
+        chkNonEmps(it, json.get, '/api/v1/company/people?id=3');
         it('requires id parameter', async function() {
           await doLogin(emVivianne);
-          const r: msg = await json.get('/company/people');
+          const r: msg = await json.get('/api/v1/company/people');
           assert(!r.success);
           assert.strictEqual(r.debug, 'badformat');
         });
         it('Vivanne can see employees in her company', async function() {
           await doLogin(emVivianne);
-          const r: msg = await json.get('/company/people?id=18');
+          const r: msg = await json.get('/api/v1/company/people?id=18');
           assert(r.success);
-          assert.strictEqual(r.body.email, 'ldonnei@seesaa.net');
+          const spc = Object.assign({email: emDonne}, uspecs[emDonne]);
+          const actual: any = util.copyAttribs({}, r.body, Object.keys(spc));
+          if (!actual.isAdmin) actual.isAdmin = false;
+          assert.deepStrictEqual(actual, spc);
+        });
+        it('Bad employee ID', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people?id=1337');
+          assert(r.success);
+          assert.strictEqual(r.body, null);
         });
         it('Vivanne cannot see employees not in her company', async function() {
           await doLogin(emVivianne);
-          const r: msg = await json.get('/company/people?id=19');
+          const r: msg = await json.get('/api/v1/company/people?id=19');
           assert(r.success);
           assert.strictEqual(r.body, null);
         });
@@ -769,16 +779,16 @@ describe('server', function() {
           email: 'lilfu@enarc.org',
           address: null,
         };
-        chkNonEmps(it, json.post, '/company/people', newEmp);
+        chkNonEmps(it, json.post, '/api/v1/company/people', newEmp);
         it('Vivianne (non-manager) cannot add new employee', async function() {
           await doLogin(emVivianne);
-          const r: msg = await json.post('/company/people', newEmp);
+          const r: msg = await json.post('/api/v1/company/people', newEmp);
           assert(!r.success);
-          assert.strictEqual(r.debug, 'badformat');
+          assert.strictEqual(r.debug, 'notmanager');
         });
         it('Cannot add employee with same email', async function() {
           await doLogin(emKrystal);
-          const r: msg = await json.post('/company/people', {
+          const r: msg = await json.post('/api/v1/company/people', {
             fname: 'Brownian',
             lname: 'Motion',
             email: emBrown,
@@ -789,91 +799,103 @@ describe('server', function() {
         });
         it('Krystal (manager) can add new employee', async function() {
           await doLogin(emKrystal);
-          const r: msg = await json.post('/company/people', newEmp);
+          const r: msg = await json.post('/api/v1/company/people', newEmp);
           assert(r.success);
           assert(util.isNumber(r.body.id));
-          const r2: msg = await json.get(`/company/people?id=${r.body.id}`);
+          const r2: msg = await json.get('/api/v1/company/people?id=' +
+              r.body.id);
           assert(r2.success);
 
           const expect = Object.assign({
-            worksAt: loader.db.EMPLOYEE.get(6).worksAt,
+            worksAt: loader.db.EMPLOYEE.get(7).worksAt,
             isEmployee: true,
             isUtd: false,
             oneTimePass: true,
           }, newEmp);
           const actual = util.copyAttribs({}, r2.body, Object.keys(expect));
           assert.deepStrictEqual(actual, expect);
-          assert.notEqual(r2.body.password, null);
+          await db.getInst().doRTransaction(async (tr) => {
+            const emp = await tr.loadEmployeeInfo(r.body.id);
+            if (util.isNull(emp)) {
+              assert.fail('Employee not in DB');
+              return;
+            }
+            assert(await util.chkPassword(r.body.password, emp.password));
+          });
         });
       });
+      /*
       describe('PUT', function() {
         const change = {
           userID: 18,
           email: emBrown,
           address: 'Some address',
         };
-        chkNonEmps(it, json.put, '/company/people', change);
+        chkNonEmps(it, json.put, '/api/v1/company/people', change);
         it('Vivianne (non manager) cannot modify employees', async function() {
           await doLogin(emVivianne);
-          const r: msg = await json.put('/company/people', change);
+          const r: msg = await json.put('/api/v1/company/people', change);
           assert(!r.success);
           assert.strictEqual(r.debug, 'notmanager');
         });
         it('Krystal (manager) cannot modify other company', async function() {
           await doLogin(emKrystal);
-          const r: msg = await json.put('/company/people', change);
+          const r: msg = await json.put('/api/v1/company/people', change);
           assert(!r.success);
           assert.strictEqual(r.debug, 'notmanager');
         });
         it('Cannot change employee to have dup email', async function() {
           await doLogin(emDonne);
-          const r: msg = await json.put('/company/people', change);
+          const r: msg = await json.put('/api/v1/company/people', change);
           assert(!r.success);
           assert.strictEqual(r.debug, 'bademail');
         });
         it('Bad uid modify should error', async function() {
           await doLogin(emDonne);
-          const r: msg = await json.put('/company/people', {userID: 1012});
+          const r: msg = await json.put('/api/v1/company/people',
+              {userID: 1012});
           assert(!r.success);
           assert.strictEqual(r.debug, 'baduid');
         });
         it('Empty modify should error', async function() {
           await doLogin(emDonne);
-          const r: msg = await json.put('/company/people', {userID: 1012});
+          const r: msg = await json.put('/api/v1/company/people',
+              {userID: 1012});
           assert(!r.success);
           assert.strictEqual(r.debug, 'empty');
         });
         it('Successfully changes email and address', async function() {
           await doLogin(emDonne);
           change.email = 'someotheremail';
-          const r: msg = await json.put('/company/people', change);
+          const r: msg = await json.put('/api/v1/company/people', change);
           assert(r.success);
 
-          const r2: msg = await json.get(`/company/people?id=${change.userID}`);
+          const r2: msg = await json.get('/api/v1/company/people?id=' +
+              change.userID);
           assert(r2.success);
           const actual = util.copyAttribs({}, r2.body, Object.keys(change));
           assert.deepStrictEqual(actual, change);
 
           change.email = emDonne; // Change it back
-          const r3: msg = await json.put('/company/people', change);
+          const r3: msg = await json.put('/api/v1/company/people', change);
           assert(r3.success);
         });
       });
     });
     describe('/company/people/list', function() {
       describe('GET', function() {
-        chkNonEmps(it, json.get, '/company/people/list');
+        chkNonEmps(it, json.get, '/api/v1/company/people/list');
         it('Donne should get employees in same company', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.get('/company/people/list');
+          await doLogin(emDonne);
+          const r: msg = await json.get('/api/v1/company/people/list');
           assert(r.success);
           assert(util.isArray(r.body));
           const ids = r.body.map((n) => parseInt(n)).nsort();
           assert.deepStrictEqual(ids, [6, 18]);
         });
         it('Krystal should get employees in same company', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.get('/company/people/list');
+          await doLogin(emDonne);
+          const r: msg = await json.get('/api/v1/company/people/list');
           assert(r.success);
           assert(util.isArray(r.body));
           const ids = r.body.map((n) => parseInt(n)).nsort();
@@ -881,10 +903,10 @@ describe('server', function() {
         });
       });
       describe('POST', function() {
-        chkNonEmps(it, json.post, '/company/people/list', [0]);
+        chkNonEmps(it, json.post, '/api/v1/company/people/list', [0]);
         it('Donne should get employees in same company', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.post('/company/people/list',
+          await doLogin(emDonne);
+          const r: msg = await json.post('/api/v1/company/people/list',
               util.range(50));
           assert(r.success);
           assert(util.isArray(r.body));
@@ -892,8 +914,8 @@ describe('server', function() {
           assert.deepStrictEqual(ids, [6, 18]);
         });
         it('Krystal should get employees in same company', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.post('/company/people/list',
+          await doLogin(emDonne);
+          const r: msg = await json.post('/api/v1/company/people/list',
               util.range(50));
           assert(r.success);
           const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
@@ -901,40 +923,41 @@ describe('server', function() {
         });
       });
       describe('DELETE', function() {
-        chkNonEmps(it, json.delete, '/company/people/list', [0]);
+        chkNonEmps(it, json.delete, '/api/v1/company/people/list', [0]);
         it('Krystal (non manager) cannot delete emps', async function() {
-          doLogin(emKrystal);
-          const r: msg = await json.post('/company/people/list',
+          await doLogin(emKrystal);
+          const r: msg = await json.post('/api/v1/company/people/list',
               util.range(50));
           assert(r.success); // Successfull, but empty list modified
           assert.deepStrictEqual(r.body, []);
         });
         it('Donne (manager) cannot delete employees outside her company',
             async function() {
-              doLogin(emKrystal);
-              const r: msg = await json.post('/company/people/list',
+              await doLogin(emKrystal);
+              const r: msg = await json.post('/api/v1/company/people/list',
                   [1, 2, 3, 4]);
               assert(r.success); // Successfull, but empty list modified
               assert.deepStrictEqual(r.body, []);
             });
         it('Donne (manager) cannot remove herself', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.post('/company/people/list',
+          await doLogin(emDonne);
+          const r: msg = await json.post('/api/v1/company/people/list',
               [17, 18, 19]);
           assert(r.success); // Successfull, but empty list modified
           assert.deepStrictEqual(r.body, []);
         });
         it('Donne (manager) deletes krystal', async function() {
-          doLogin(emDonne);
-          const r: msg = await json.delete('/company/people/list', [6, 7]);
+          await doLogin(emDonne);
+          const r: msg = await json.delete('/api/v1/company/people/list',
+              [6, 7]);
           assert(r.success);
           assert.deepStrictEqual(r.body, [6]);
 
-          const r2: msg = await json.get('/company/people?id=6');
+          const r2: msg = await json.get('/api/v1/company/people?id=6');
           assert(!r2.success);
           assert.strictEqual(r2.debug, 'baduid');
         });
-      });
+      });*/
     });
   });
 });
