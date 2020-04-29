@@ -119,7 +119,9 @@ export class User extends Uent implements typ.User {
    * @param conn - the DB transaction connection
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
-    Object.assign(this, await conn.loadUserInfo(this.uid));
+    const res = await conn.loadUserInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
+    Object.assign(this, res);
     if (this.isEmployee) {
       await doReloadOr(conn, this, 'employee', Employee.bind(null, this.uid));
     }

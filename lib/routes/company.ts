@@ -11,8 +11,6 @@ import {User, Employee} from '../model/usertypes';
 import {User as CUser} from '../model/user';
 import type {DatabaseTransaction as DBTrans} from '../model/dbtypes';
 
-import {UTDType as utypes} from '../model/enttypes';
-
 const r = express.Router();
 const comp = express.Router();
 
