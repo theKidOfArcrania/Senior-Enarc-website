@@ -25,6 +25,7 @@ export const codes = {
   badperm: mt.PERM,
   badpassword: mt.PERM,
   badproj: mt.ILL_ARG,
+  empty: mt.ILL_ARG,
   duplicatechoice: mt.ILL_ARG,
   internal: mt.INTERNAL,
   multifile: mt.ILL_ARG,
