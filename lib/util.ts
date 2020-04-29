@@ -120,6 +120,15 @@ export function range(lower: number, upper?: number, skip?: number): number[] {
 }
 
 /**
+ * This generates a random string comprised of the base64 alphabet
+ * @param bytes - the number of bytes to generate
+ */
+export function randomBase64(bytes: number): string {
+  const rand = crypto.randomBytes(Math.ceil(bytes/4*3)+2).toString('base64');
+  return rand.substr(0, bytes);
+}
+
+/**
  * Returns a random alphanumeric ID that's roughly time-sortable and guarenteed
  * to be unique It is also guarenteed to be cryptographically secure/not
  * guessable.
@@ -222,7 +231,7 @@ export function promisifyObj<T>(obj: T): PromisifiedObj<T> {
  * @param passwd -  the password to compute a hash on
  */
 export async function hashPassword(passwd: string): Promise<string> {
-  return await bcrypt.hash(passwd, config.BCRYPT_ROUNDS);
+  return bcrypt.hash(passwd, config.BCRYPT_ROUNDS);
 }
 
 /**
@@ -232,7 +241,7 @@ export async function hashPassword(passwd: string): Promise<string> {
  */
 export async function chkPassword(passwd: string, hash: string):
     Promise<boolean> {
-  return await bcrypt.compare(passwd, hash);
+  return bcrypt.compare(passwd, hash);
 }
 
 

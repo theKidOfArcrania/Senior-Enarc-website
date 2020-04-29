@@ -272,6 +272,7 @@ r.put('/team', auth.student, asyncHan(async (req, res) => {
       alters.password = await util.hashPassword(setPassword);
     }
 
+    m = msg.fail('Empty modification', 'empty');
     return await tr.alterTeamInfo(team.tid, alters);
   });
 

@@ -87,7 +87,7 @@ function restAPIFor(entity, opts: RestAPIOptions): void {
     if (success) {
       res.json(msg.success('Success!'));
     } else {
-      res.json(msg.fail('An unknown error occurred!', 'internal'));
+      res.json(msg.fail('Empty modification', 'empty'));
     }
   }));
 

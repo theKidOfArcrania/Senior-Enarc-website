@@ -82,6 +82,7 @@ export default async function initServer(): Promise<http.Server> {
   apis.use(require('./routes/login'));
   apis.use(require('./routes/team'));
   apis.use(require('./routes/project'));
+  apis.use(require('./routes/company'));
   /* eslint-enable */
 
   app.use((err, req, res, next) => {
