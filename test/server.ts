@@ -19,6 +19,8 @@ config.UPLOAD.debug = false;
 import initServer from '../lib/server';
 
 import * as util from '../lib/util';
+import {getInst} from '../lib/model/db';
+import loadIntoDB from './data/loader';
 
 // Since all our requests are synchronous!
 util.Reentrant.prototype.tryLock = async function(): Promise<boolean> {
@@ -642,16 +644,7 @@ describe('server', function() {
       });
     });
   });
-  describe('admin', function() {
-    describe('/admin/', function() {
-      it('should not accept non-admin user', async function() {
-        await doLogin(eDowley);
-        const r1 = await json.get('/api/v1/admin/nonexistent');
-        assert(!r1.success);
-        assert.strictEqual(r1.debug, 'notadmin');
-      });
-    });
-  });
+  let fileID;
   describe('upload', function() {
     const fileBody = 'haha';
     const file = Buffer.from(fileBody, 'utf8');
@@ -720,6 +713,29 @@ describe('server', function() {
       await agent.get(`/api/v1/file/${r.body.name}`)
           .expect('Content-Disposition', `attachment; filename="${fileName}"`)
           .expect(200, file);
+      fileID = r.body.name;
+    });
+  });
+  describe('admin', function() {
+    describe('/admin/', function() {
+      it('should not accept non-admin user', async function() {
+        await doLogin(eDowley);
+        const r1 = await json.get('/api/v1/admin/nonexistent');
+        assert(!r1.success);
+        assert.strictEqual(r1.debug, 'notadmin');
+      });
+      it('should allow admin to create new entities', async function() {
+        await doLogin(eBrown);
+        const r1 = await json.post('/api/v1/admin/company',
+            {name: 'testComp', logo: fileID, manager: 0});
+        assert(r1.success);
+      });
     });
   });
 });
+
+// Load back into DB after mass deletenop
+// getInst().doTransaction(async function(tr) {
+//           loadIntoDB(tr);
+//           return true;
+//         });

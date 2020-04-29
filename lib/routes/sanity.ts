@@ -20,6 +20,7 @@ r.post('/testlogin', ct(ct.obj({'email': ct.string(50)})));
 // types and the other field types
 const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
   company: [['name', ct.string(50)], {
+    name: ct.string(50),
     logo: ct.file,
     manager: ct.int,
   }],
