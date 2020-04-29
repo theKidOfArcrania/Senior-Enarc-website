@@ -47,6 +47,7 @@ const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
     mentor: ct.int,
     advisor: ct.maybeNull(ct.int),
     visible: ct.bool,
+    // TODO: skillsReq
   }],
   team: [['tid', ct.int], {
     assignedProj: ct.maybeNull(ct.int),
@@ -136,5 +137,8 @@ r.put('/company/people/', ct(ct.obj<ent.Users>({
   email: ct.maybeDefined(ct.string(100)),
   address: ct.maybeDefined(ct.maybeNull(ct.string(100))),
 })));
+
+r.post('/company/people/list', ct(ct.array(ct.int)));
+r.delete('/company/people/list', ct(ct.array(ct.int)));
 
 module.exports = r;

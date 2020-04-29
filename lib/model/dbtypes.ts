@@ -417,6 +417,13 @@ export abstract class DatabaseTransaction<DB> {
    * ************************************/
 
   /**
+   * Finds all the employees that reside at a company
+   * @param company - the company to search from
+   * @returns a list of user IDs
+   */
+  abstract async findEmployeesAt(company: string): Promise<number[]>;
+
+  /**
    * Searches for the user ID's of all students that are on this team
    * @param teamId - the team ID to search on
    */

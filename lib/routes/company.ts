@@ -133,7 +133,56 @@ comp.put('/people', asyncHan(async function(req, res) {
 }));
 
 // List all employees
-comp.get('/employee/list', asyncHan(async function(req, res) {
+comp.get('/people/list', asyncHan(async function(req, res) {
+  const m = await getInst().doRTransaction(async (tr) => {
+    const ids = await tr.findEmployeesAt(req.employee.worksAt);
+    return msg.success('Success!', ids);
+  });
+  res.json(m);
+}));
+
+// Get info on some employees
+comp.post('/people/list', asyncHan(async function(req, res) {
+  await getInst().doRTransaction(async (tr) => {
+    const ids = await tr.findEmployeesAt(req.employee.worksAt);
+    const users: {[ID: number]: ent.Users} = {};
+    for (const id of req.bodySan) {
+      if (!ids.includes(id)) continue;
+      const u = new CUser(id);
+      try {
+        await u.reload(tr);
+        users[id] = u.normalize();
+      } catch (e) {
+        continue;
+      }
+    }
+    res.json(msg.success('Success!', users));
+  });
+}));
+
+// Get info on some employees
+comp.delete('/people/list', asyncHan(async function(req, res) {
+  let m = msg.fail('Unknown error occurred', 'internal');
+  const success = await getInst().doTransaction(async (tr) => {
+    // Check manager
+    const mm = await chkCompMmgr(tr, req.employee);
+    if (!isNull(mm)) {
+      m = mm;
+      return false;
+    }
+
+    const ids = await tr.findEmployeesAt(req.employee.worksAt);
+    const dels: number[] = [];
+    for (const id of req.bodySan) {
+      if (!ids.includes(id)) continue;
+      if (id === req.employee.uid) continue;
+      if (await tr.deleteUser(id)) dels.push(id);
+    }
+    return dels;
+  });
+
+  if (success) m = msg.success('Success!', success);
+  res.json(m);
 }));
 
 export = r;

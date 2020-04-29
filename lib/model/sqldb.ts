@@ -173,6 +173,17 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    * ************************************/
 
   /**
+   * Finds all the employees that reside at a company
+   * @param company - the company to search from
+   * @returns a list of user IDs
+   */
+  async findEmployeesAt(company: string): Promise<number[]> {
+    const qstr = 'SELECT euid FROM Employee WHERE worksAt = ?';
+    const res = await this._query(qstr, [company]);
+    return Array.prototype.map.call(res, (v) => v.euid);
+  }
+
+  /**
    * Searches for the user ID's of all students that are on this team
    * @param teamId - the team ID to search on
    */

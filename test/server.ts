@@ -892,8 +892,8 @@ describe('server', function() {
           const ids = r.body.map((n) => parseInt(n)).nsort();
           assert.deepStrictEqual(ids, [6, 18]);
         });
-        it('Krystal should get employees in same company', async function() {
-          await doLogin(emDonne);
+        it('Vivianne should get employees in same company', async function() {
+          await doLogin(emVivianne);
           const r: msg = await json.get('/api/v1/company/people/list');
           assert(r.success);
           assert(util.isArray(r.body));
@@ -908,45 +908,50 @@ describe('server', function() {
           const r: msg = await json.post('/api/v1/company/people/list',
               util.range(50));
           assert(r.success);
-          assert(util.isArray(r.body));
           const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
           assert.deepStrictEqual(ids, [6, 18]);
         });
-        it('Krystal should get employees in same company', async function() {
-          await doLogin(emDonne);
+        it('Vivianne should get employees in same company', async function() {
+          await doLogin(emVivianne);
           const r: msg = await json.post('/api/v1/company/people/list',
               util.range(50));
           assert(r.success);
           const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
           assert.deepStrictEqual(ids, [6, 18]);
         });
+        it('Vivianne should get one employee', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.post('/api/v1/company/people/list', [6]);
+          assert(r.success);
+          const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6]);
+        });
       });
-      /*
       describe('DELETE', function() {
         chkNonEmps(it, json.delete, '/api/v1/company/people/list', [0]);
-        it('Krystal (non manager) cannot delete emps', async function() {
-          await doLogin(emKrystal);
-          const r: msg = await json.post('/api/v1/company/people/list',
+        it('Vivianne (non manager) cannot delete emps', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.delete('/api/v1/company/people/list',
               util.range(50));
-          assert(r.success); // Successfull, but empty list modified
-          assert.deepStrictEqual(r.body, []);
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'notmanager');
         });
         it('Donne (manager) cannot delete employees outside her company',
             async function() {
-              await doLogin(emKrystal);
-              const r: msg = await json.post('/api/v1/company/people/list',
+              await doLogin(emDonne);
+              const r: msg = await json.delete('/api/v1/company/people/list',
                   [1, 2, 3, 4]);
               assert(r.success); // Successfull, but empty list modified
               assert.deepStrictEqual(r.body, []);
             });
         it('Donne (manager) cannot remove herself', async function() {
           await doLogin(emDonne);
-          const r: msg = await json.post('/api/v1/company/people/list',
+          const r: msg = await json.delete('/api/v1/company/people/list',
               [17, 18, 19]);
           assert(r.success); // Successfull, but empty list modified
           assert.deepStrictEqual(r.body, []);
         });
-        it('Donne (manager) deletes krystal', async function() {
+        it('Donne (manager) deletes Vivianne', async function() {
           await doLogin(emDonne);
           const r: msg = await json.delete('/api/v1/company/people/list',
               [6, 7]);
@@ -954,10 +959,10 @@ describe('server', function() {
           assert.deepStrictEqual(r.body, [6]);
 
           const r2: msg = await json.get('/api/v1/company/people?id=6');
-          assert(!r2.success);
-          assert.strictEqual(r2.debug, 'baduid');
+          assert(r2.success);
+          assert.strictEqual(r2.body, null);
         });
-      });*/
+      });
     });
   });
 });
