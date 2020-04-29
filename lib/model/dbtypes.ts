@@ -920,7 +920,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterUserInfo(uid, changes): Promise<boolean> {
+  async alterUserInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('USER', uid, changes);
   }
@@ -929,7 +929,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param pid - the project id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterProjectInfo(pid, changes): Promise<boolean> {
+  async alterProjectInfo(pid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('PROJECT', pid, changes);
   }
@@ -939,7 +939,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterUTDInfo(uid, changes): Promise<boolean> {
+  async alterUTDInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('UTD_PERSONNEL', uid, changes);
   }
@@ -948,7 +948,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterStudentInfo(uid, changes): Promise<boolean> {
+  async alterStudentInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('STUDENT', uid, changes);
   }
@@ -957,7 +957,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterEmployeeInfo(uid, changes): Promise<boolean> {
+  async alterEmployeeInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('EMPLOYEE', uid, changes);
   }
@@ -966,7 +966,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param name - the company name to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterCompanyInfo(name, changes): Promise<boolean> {
+  async alterCompanyInfo(name: string, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('COMPANY', name, changes);
   }
@@ -976,7 +976,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param inviteID - the invitation ID to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterInviteInfo(inviteID, changes): Promise<boolean> {
+  async alterInviteInfo(inviteID: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('INVITE', inviteID, changes);
   }
@@ -986,7 +986,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param tid - the team id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterTeamInfo(tid, changes): Promise<boolean> {
+  async alterTeamInfo(tid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
       if (changes.choices) await _this.setChoices(tid, changes.choices);
@@ -1000,7 +1000,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param hid - the team id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterHelpTicketInfo(hid, changes): Promise<boolean> {
+  async alterHelpTicketInfo(hid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('HELP_TICKET', hid, changes);
   }

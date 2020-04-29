@@ -92,6 +92,7 @@ r.delete('/team/member', ct(ct.array(ct.int)));
 
 r.post('/project', ct(ct.array(ct.int)));
 
+// TODO: for each put, if alter returns false, error with empty
 r.put('/project', ct(ct.obj<ent.Project>({
   projID: ct.int,
   pName: ct.maybeDefined(ct.string(50)),
@@ -128,5 +129,12 @@ r.post('/company/people/', ct(ct.obj<ent.Users>({
   address: ct.maybeNull(ct.string(100)),
 })));
 
+r.put('/company/people/', ct(ct.obj<ent.Users>({
+  userID: ct.int,
+  fname: ct.maybeDefined(ct.string(50)),
+  lname: ct.maybeDefined(ct.string(50)),
+  email: ct.maybeDefined(ct.string(100)),
+  address: ct.maybeDefined(ct.maybeNull(ct.string(100))),
+})));
 
 module.exports = r;

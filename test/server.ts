@@ -824,7 +824,6 @@ describe('server', function() {
           });
         });
       });
-      /*
       describe('PUT', function() {
         const change = {
           userID: 18,
@@ -842,7 +841,7 @@ describe('server', function() {
           await doLogin(emKrystal);
           const r: msg = await json.put('/api/v1/company/people', change);
           assert(!r.success);
-          assert.strictEqual(r.debug, 'notmanager');
+          assert.strictEqual(r.debug, 'baduid');
         });
         it('Cannot change employee to have dup email', async function() {
           await doLogin(emDonne);
@@ -858,9 +857,9 @@ describe('server', function() {
           assert.strictEqual(r.debug, 'baduid');
         });
         it('Empty modify should error', async function() {
-          await doLogin(emDonne);
+          await doLogin(emKrystal);
           const r: msg = await json.put('/api/v1/company/people',
-              {userID: 1012});
+              {userID: 7});
           assert(!r.success);
           assert.strictEqual(r.debug, 'empty');
         });
@@ -922,6 +921,7 @@ describe('server', function() {
           assert.deepStrictEqual(ids, [6, 18]);
         });
       });
+      /*
       describe('DELETE', function() {
         chkNonEmps(it, json.delete, '/api/v1/company/people/list', [0]);
         it('Krystal (non manager) cannot delete emps', async function() {
