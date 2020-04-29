@@ -163,7 +163,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    */
   async deleteAllStudents(): Promise<void> {
     await this.checkValid();
-    await this._query('DELETE FROM User WHERE EXISTS ' +
+    await this._query('DELETE FROM Users WHERE EXISTS ' +
         '(SELECT suid FROM Student WHERE suid = userID)');
   }
 
@@ -212,9 +212,10 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    */
   async findTeamChoices(tid): Promise<number[]> {
     await this.checkValid();
+
     const qstr = 'SELECT * FROM Choice WHERE tid = ?';
     const res = (await this._query(qstr, [tid])).result;
-    const rankedList = Array(6);
+    const rankedList = [];
     for (const choice of res) {
       rankedList[choice['ranking']] = choice['pid'];
     }

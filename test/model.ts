@@ -439,6 +439,101 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
     }
   });
+  type SearchSpec = [etyp.Tables2, etyp.ID, string, etyp.ID];
+  const search: SearchSpec[] = [
+    ['User', 'adowley0@myspace.com', 'Email', 0],
+    ['Team', 'Group 16', 'Name', 16],
+  ];
+  describe('search', function() {
+    for (const [mth, query, queryTitle, correct] of search) {
+      const searchFunc = `search${mth}By${queryTitle}`;
+
+      describe(mth, function() {
+        it('returns null on searching bad ID', async function() {
+          assert(isNull(await model[searchFunc](9001)));
+        });
+      });
+      describe(mth, function() {
+        it('correct ID retrieved from search', async function() {
+          const result = await model[searchFunc](query);
+          assert.deepStrictEqual(result, correct);
+        });
+      });
+    }
+  });
+  type FindSpec = [string, etyp.ID, {readonly [x: number]: any }];
+  const finders: FindSpec[] = [
+    ['MembersOfTeam', 39, [0, 3]],
+    ['TeamChoices', 16, [16, 50, 33, 28, 37, 14]],
+    ['ManagesProject', 4, [5, 13, 28, 37]],
+  ];
+  describe('find', function() {
+    for (const [mth, query, correct] of finders) {
+      const findFunc = `find${mth}`;
+
+      describe(mth, function() {
+        it('returns no choices on finding bad ID', async function() {
+          const result = await model[findFunc](1337);
+          assert.strictEqual(result.length, 0);
+        });
+      });
+      describe(mth, function() {
+        it('correct members retrieved from find', async function() {
+          const result = await model[findFunc](query);
+          assert.deepStrictEqual(result, correct);
+        });
+      });
+    }
+  });
+  type GetSpec = [string, etyp.ID, {readonly [x: number]: any }];
+  const getters: FindSpec[] = [
+    ['Skills', 16, ['BWA', 'CMMI', 'Gstreamer']],
+    ['SkillsReq', 47, ['Image Editing']],
+  ];
+  describe('get', function() {
+    for (const [mth, query, correct] of getters) {
+      const getFunc = `get${mth}`;
+
+      describe(mth, function() {
+        it('returns null on getting bad ID', async function() {
+          assert((await model[getFunc](1337)),
+              'TypeError: Cannot read property \'' + mth + '\' of undefined');
+        });
+      });
+      describe(mth, function() {
+        it('correct skills retrieved from get', async function() {
+          const result = (await model[getFunc](query)).sort();
+          assert.deepStrictEqual(result, correct);
+        });
+      });
+    }
+  });
+  describe('bulk ops', function() {
+    describe('Student Purge', function() {
+      it('no remaining students after purge', async function() {
+        await model.doNestedTransaction(async () => {
+          await model.deleteAllStudents();
+          const postStudentPurge = (await model.findAllStudents());
+          assert.strictEqual(postStudentPurge.length, 0);
+          return false;
+        });
+      });
+    });
+    describe('Project Archive', function() {
+      it('no remaining projects after archiving', async function() {
+        await model.doNestedTransaction(async () => {
+          await model.archiveAllProjects();
+          const postProject = (await model.findAllProjects());
+          for (const pid of postProject) {
+            const p = await model.loadProjectInfo(pid);
+            if (isNull(p)) throw new Error('Cannot be null');
+            assert.notEqual(p.status, etyp.ProjectStatus.ACCEPTED);
+          }
+          return false;
+        });
+      });
+    });
+  });
 }
 
 describe('model', async function() {
