@@ -472,9 +472,9 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       const findFunc = `find${mth}`;
 
       describe(mth, function() {
-        it('returns null on finding bad ID', async function() {
+        it('returns no choices on finding bad ID', async function() {
           const result = await model[findFunc](1337);
-          assert((!(result.length)));
+          assert.strictEqual(result.length, 0);
         });
       });
       describe(mth, function() {
@@ -487,7 +487,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
   });
   type GetSpec = [string, etyp.ID, {readonly [x: number]: any }];
   const getters: FindSpec[] = [
-    ['Skills', 16, ['CMMI', 'BWA', 'Gstreamer']],
+    ['Skills', 16, ['BWA', 'CMMI', 'Gstreamer']],
     ['SkillsReq', 47, ['Image Editing']],
   ];
   describe('get', function() {
@@ -502,7 +502,7 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
       });
       describe(mth, function() {
         it('correct skills retrieved from get', async function() {
-          const result = await model[getFunc](query);
+          const result = (await model[getFunc](query)).sort();
           assert.deepStrictEqual(result, correct);
         });
       });
@@ -512,9 +512,9 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     describe('Student Purge', function() {
       it('no remaining students after purge', async function() {
         await model.doNestedTransaction(async () => {
-          assert(await model[`deleteAllStudents`]());
-          const postStudentPurge = (await model[`findAllStudents`]());
-          assert(!(postStudentPurge.length));
+          await model.deleteAllStudents();
+          const postStudentPurge = (await model.findAllStudents());
+          assert.strictEqual(postStudentPurge.length, 0);
           return false;
         });
       });
@@ -522,9 +522,13 @@ function verifyModel<DB>(db: dtyp.Database<DB>): void {
     describe('Project Archive', function() {
       it('no remaining projects after archiving', async function() {
         await model.doNestedTransaction(async () => {
-          assert(await model[`archiveAllProjects`]());
-          const postProjectPurge = (await model[`findAllProjects`]());
-          assert(!(postProjectPurge.length));
+          await model.archiveAllProjects();
+          const postProject = (await model.findAllProjects());
+          for (const pid of postProject) {
+            const p = await model.loadProjectInfo(pid);
+            if (isNull(p)) throw new Error('Cannot be null');
+            assert.notEqual(p.status, etyp.ProjectStatus.ACCEPTED);
+          }
           return false;
         });
       });

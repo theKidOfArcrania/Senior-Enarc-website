@@ -175,7 +175,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
     await this.pushSP();
     try {
       for (const id of Object.keys(this._db.STUDENT)) {
-        await this._deleteEntity('USER', id);
+        await this.deleteUser(parseInt(id));
       }
     } catch (e) {
       await this.popSP();
@@ -257,6 +257,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
   async findTeamChoices(tid): Promise<number[]> {
     await this.checkValid();
     const choice: number[] = [];
+    if (!(tid in this._db.CHOICE)) return [];
     for (const rank of range(6)) {
       choice[rank] = this._db.CHOICE[tid][rank];
     }
@@ -268,6 +269,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * @param suid - the student ID
    */
   async getSkills(suid: number): Promise<string[]> {
+    if (!(suid in this._db.STUDENT)) return [];
     return this._db.STUDENT[suid].skills || [];
   }
 
@@ -276,6 +278,7 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * @param pid - the project ID
    */
   async getSkillsReq(pid: number): Promise<string[]> {
+    if (!(pid in this._db.PROJECT)) return [];
     return this._db.PROJECT[pid].skillsReq || [];
   }
 
