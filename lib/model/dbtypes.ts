@@ -417,6 +417,13 @@ export abstract class DatabaseTransaction<DB> {
    * ************************************/
 
   /**
+   * Finds all the employees that reside at a company
+   * @param company - the company to search from
+   * @returns a list of user IDs
+   */
+  abstract async findEmployeesAt(company: string): Promise<number[]>;
+
+  /**
    * Searches for the user ID's of all students that are on this team
    * @param teamId - the team ID to search on
    */
@@ -474,7 +481,7 @@ export abstract class DatabaseTransaction<DB> {
    *
    * @param table -  the name of the table to find a unique ID.
    */
-  async findUniqueID(table): Promise<number> {
+  async findUniqueID(table: ent.Tables2): Promise<number> {
     await this.checkValid();
     if (typeof this['load' + table + 'Info'] !== 'function') {
       throw new DBError('Not a valid table name!');
@@ -649,7 +656,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param projID - the projID to insert at.
    * @param projInfo - the attributes of the project
    */
-  async insertProjectInfo(projID, projInfo): Promise<boolean> {
+  async insertProjectInfo(projID: number, projInfo): Promise<boolean> {
     await this.checkValid();
     if (!(await this._insertEntity('PROJECT', projID, projInfo))) return false;
     if (projInfo.skillsReq && projInfo.skillsReq.length) {
@@ -663,7 +670,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to insert at.
    * @param userinfo - the attributes of the user
    */
-  async insertUserInfo(uid, userinfo): Promise<boolean> {
+  async insertUserInfo(uid: number, userinfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('USER', uid, userinfo);
   }
@@ -673,7 +680,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to insert at.
    * @param userinfo - the attributes of the user
    */
-  async insertUTDInfo(uid, userinfo): Promise<boolean> {
+  async insertUTDInfo(uid: number, userinfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('UTD_PERSONNEL', uid, userinfo);
   }
@@ -683,7 +690,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to insert at.
    * @param userinfo - the attributes of the user
    */
-  async insertStudentInfo(uid, userinfo): Promise<boolean> {
+  async insertStudentInfo(uid: number, userinfo): Promise<boolean> {
     await this.checkValid();
     if (!(await this._insertEntity('STUDENT', uid, userinfo))) return false;
     if (userinfo.skills && userinfo.skills.length) {
@@ -697,7 +704,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to insert at.
    * @param userinfo - the attributes of the user
    */
-  async insertFacultyInfo(uid, userinfo): Promise<boolean> {
+  async insertFacultyInfo(uid: number, userinfo): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
       if (!(await _this._insertEntity('FACULTY_OR_TEAM', userinfo.tid,
@@ -715,7 +722,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to insert at.
    * @param userinfo - the attributes of the user
    */
-  async insertEmployeeInfo(uid, userinfo): Promise<boolean> {
+  async insertEmployeeInfo(uid: number, userinfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('EMPLOYEE', uid, userinfo);
   }
@@ -725,7 +732,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param tid - the team id to insert at.
    * @param teamInfo - the attributes of the team
    */
-  async insertTeamInfo(tid, teamInfo): Promise<boolean> {
+  async insertTeamInfo(tid: number, teamInfo): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
       if (!(await _this._insertEntity('FACULTY_OR_TEAM', tid,
@@ -744,7 +751,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param cName - the company name
    * @param compInfo - the attributes of the team
    */
-  async insertCompanyInfo(cName, compInfo): Promise<boolean> {
+  async insertCompanyInfo(cName: string, compInfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('COMPANY', cName, compInfo);
   }
@@ -754,7 +761,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param hid - the help ticket id
    * @param ticketInfo - the attributes of the ticket
    */
-  async insertHelpTicketInfo(hid, ticketInfo): Promise<boolean> {
+  async insertHelpTicketInfo(hid: number, ticketInfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('HELP_TICKET', hid, ticketInfo);
   }
@@ -764,7 +771,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param inviteID - the new id
    * @param inviteInfo - the attributes of the invite
    */
-  async insertInviteInfo(inviteID, inviteInfo): Promise<boolean> {
+  async insertInviteInfo(inviteID: number, inviteInfo): Promise<boolean> {
     await this.checkValid();
     return this._insertEntity('INVITE', inviteID, inviteInfo);
   }
@@ -920,7 +927,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterUserInfo(uid, changes): Promise<boolean> {
+  async alterUserInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('USER', uid, changes);
   }
@@ -929,7 +936,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param pid - the project id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterProjectInfo(pid, changes): Promise<boolean> {
+  async alterProjectInfo(pid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('PROJECT', pid, changes);
   }
@@ -939,7 +946,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterUTDInfo(uid, changes): Promise<boolean> {
+  async alterUTDInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('UTD_PERSONNEL', uid, changes);
   }
@@ -948,7 +955,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterStudentInfo(uid, changes): Promise<boolean> {
+  async alterStudentInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('STUDENT', uid, changes);
   }
@@ -957,7 +964,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param uid - the user id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterEmployeeInfo(uid, changes): Promise<boolean> {
+  async alterEmployeeInfo(uid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('EMPLOYEE', uid, changes);
   }
@@ -966,7 +973,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param name - the company name to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterCompanyInfo(name, changes): Promise<boolean> {
+  async alterCompanyInfo(name: string, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('COMPANY', name, changes);
   }
@@ -976,7 +983,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param inviteID - the invitation ID to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterInviteInfo(inviteID, changes): Promise<boolean> {
+  async alterInviteInfo(inviteID: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('INVITE', inviteID, changes);
   }
@@ -986,7 +993,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param tid - the team id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterTeamInfo(tid, changes): Promise<boolean> {
+  async alterTeamInfo(tid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this.doNestedTransaction(async (_this) => {
       if (changes.choices) await _this.setChoices(tid, changes.choices);
@@ -1000,7 +1007,7 @@ export abstract class DatabaseTransaction<DB> {
    * @param hid - the team id to search for
    * @param changes - the attributes to be changed and the new values
    */
-  async alterHelpTicketInfo(hid, changes): Promise<boolean> {
+  async alterHelpTicketInfo(hid: number, changes): Promise<boolean> {
     await this.checkValid();
     return this._alterEntity('HELP_TICKET', hid, changes);
   }

@@ -206,6 +206,19 @@ class MemDBTrans extends typ.DatabaseTransaction<MemDB> {
    * ************************************/
 
   /**
+   * Finds all the employees that reside at a company
+   * @param company - the company to search from
+   * @returns a list of user IDs
+   */
+  async findEmployeesAt(company: string): Promise<number[]> {
+    const ret: number[] = [];
+    for (const emp of Object.values(this._db.EMPLOYEE)) {
+      if (emp.worksAt === company) ret.push(emp.euid);
+    }
+    return ret;
+  }
+
+  /**
    * Searches for the user ID's of all students that are on this team
    * @param teamId - the team ID to search on
    */

@@ -18,6 +18,7 @@ r.post('/testlogin', ct(ct.obj({'email': ct.string(50)})));
 
 // Contains a key-value pair of the entity name -> tuple of the primary key
 // types and the other field types
+// TODO: refactor this into lib/model/ent
 const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
   company: [['name', ct.string(50)], {
     logo: ct.file,
@@ -46,6 +47,7 @@ const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
     mentor: ct.int,
     advisor: ct.maybeNull(ct.int),
     visible: ct.bool,
+    // TODO: skillsReq
   }],
   team: [['tid', ct.int], {
     assignedProj: ct.maybeNull(ct.int),
@@ -74,7 +76,7 @@ r.post('/admin/bulk/clearTeams', ct(ct.obj({
 
 r.post('/team', ct(ct.array(ct.int)));
 
-r.put('/team', ct(ct.obj({
+r.put('/team', ct(ct.obj<ent.Team>({
   name: ct.maybeDefined(ct.string(50)),
   leader: ct.maybeDefined(ct.int),
   password: ct.maybeDefined(ct.maybeNull(ct.string(64))),
@@ -82,7 +84,7 @@ r.put('/team', ct(ct.obj({
   comments: ct.maybeDefined(ct.string(1000)),
 })));
 
-r.post('/team/join', ct(ct.obj({
+r.post('/team/join', ct(ct.obj<ent.Team&{team: number}>({
   team: ct.int,
   password: ct.maybeNull(ct.string(64)),
 })));
@@ -91,7 +93,8 @@ r.delete('/team/member', ct(ct.array(ct.int)));
 
 r.post('/project', ct(ct.array(ct.int)));
 
-r.put('/project', ct(ct.obj({
+// TODO: for each put, if alter returns false, error with empty
+r.put('/project', ct(ct.obj<ent.Project>({
   projID: ct.int,
   pName: ct.maybeDefined(ct.string(50)),
   image: ct.maybeDefined(ct.maybeNull(ct.file)),
@@ -99,7 +102,7 @@ r.put('/project', ct(ct.obj({
   pDesc: ct.maybeDefined(ct.string(1000)),
 })));
 
-r.post('/project/submit', ct(ct.obj({
+r.post('/project/submit', ct(ct.obj<ent.Project>({
   pName: ct.string(50),
   image: ct.maybeNull(ct.file),
   projDoc: ct.maybeNull(ct.file),
@@ -108,11 +111,11 @@ r.post('/project/submit', ct(ct.obj({
   mentor: ct.int,
 })));
 
-r.post('/help', ct(ct.obj({
+r.post('/help', ct(ct.obj<ent.HelpTicket>({
   hDescription: ct.string(100),
 })));
 
-r.put('/help', ct(ct.obj({
+r.put('/help', ct(ct.obj<ent.HelpTicket>({
   hid: ct.int,
   hStatus: ct.enumT(ent.ticketStatuses),
   hDescription: ct.string(100),
@@ -120,5 +123,22 @@ r.put('/help', ct(ct.obj({
 
 r.post('/help/list', ct(ct.array(ct.int)));
 
+r.post('/company/people/', ct(ct.obj<ent.Users>({
+  fname: ct.string(50),
+  lname: ct.string(50),
+  email: ct.string(100),
+  address: ct.maybeNull(ct.string(100)),
+})));
+
+r.put('/company/people/', ct(ct.obj<ent.Users>({
+  userID: ct.int,
+  fname: ct.maybeDefined(ct.string(50)),
+  lname: ct.maybeDefined(ct.string(50)),
+  email: ct.maybeDefined(ct.string(100)),
+  address: ct.maybeDefined(ct.maybeNull(ct.string(100))),
+})));
+
+r.post('/company/people/list', ct(ct.array(ct.int)));
+r.delete('/company/people/list', ct(ct.array(ct.int)));
 
 module.exports = r;
