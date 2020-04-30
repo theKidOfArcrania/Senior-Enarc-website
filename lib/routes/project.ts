@@ -63,7 +63,7 @@ async function projectRestrictionLevel<T>(tr: DBTrans<T>, u: User,
         if (!isNull(utd.student.memberOf)) {
           const t = await tr.loadTeamInfo(utd.student.memberOf);
           // Once a student selects a project, they don't see any other projects
-          if (isNull(t) || isNull(t.assignedProj)) access = Access.NONE;
+          if (!isNull(t) && !isNull(t.assignedProj)) access = Access.NONE;
         }
         break;
       case utypes.STAFF:
