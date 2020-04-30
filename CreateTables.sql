@@ -12,7 +12,7 @@ create table Users (
   fname varchar(50) NOT NULL,
   lname varchar(50) NOT NULL,
   email varchar(100) NOT NULL UNIQUE,
-  address varchar(100) NOT NULL,
+  address varchar(100) NULL,
   isUtd boolean NOT NULL,
   isEmployee boolean NOT NULL,
   PRIMARY KEY (userID)

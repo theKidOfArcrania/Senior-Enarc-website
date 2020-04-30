@@ -44,6 +44,7 @@ r.put('/help', auth.login, asyncHan(async (req, res) => {
       return false;
     }
 
+    m = msg.fail('Empty modification', 'empty');
     return await tr.alterHelpTicketInfo(h.hid, req.bodySan);
   });
 

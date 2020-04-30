@@ -197,6 +197,7 @@ r.put('/project', auth.login, auth.employee, asyncHan(async (req, res) => {
       return false;
     }
 
+    m = msg.fail('Empty modification', 'empty');
     return await tr.alterProjectInfo(proj.projID, req.bodySan);
   });
 

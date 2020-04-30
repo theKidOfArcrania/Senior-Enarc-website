@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   description: "This is the senior enarc project, which is a new way to manage the CS senior design projects. Use this page to browse all the API endpoints allowed by the backend."
-  version: "1.0.2"
+  version: "1.0.3"
   title: "Senior Enarc Backend"
   termsOfService: ""
   contact:
@@ -20,6 +20,8 @@ tags:
   description: "viewing and managing potential projects"
 - name: "team"
   description: "let's gather and divide into teams!"
+- name: "company"
+  description: "manipulation of company information"
 - name: "help"
   description: "need to submit a help ticket?"
 - name: "admin"
@@ -527,6 +529,160 @@ paths:
                   items: 
                     type: integer
                   example: [0,1,2,3]
+  /company/people:
+    get:
+      summary: Get a single employee info
+      description: Obtain information for a singla employee. Can only be used for employees in the same company.
+      tags:
+      - "company"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  allOf:
+                  - $ref: "#/definitions/User"
+                  - $ref: "#/definitions/Employee"
+    post:
+      summary: Add a employee
+      description: This adds a new employee with a randomly generated default password (which must be changed on the first time). All fields here are required. User must be a manager of a company to use this endpoint.
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/UserNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: object
+              properties:
+                body:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    password:
+                      type: string
+    put:
+      summary: Modify an employee
+      description: Modifies an existing employee of the same company. User must be a manager of a company to use this endpoint
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          allOf:
+          - $ref: "#/definitions/UserNew"
+          - type: object
+            properties:
+              userID:
+                type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /company/people/list:
+    get:
+      summary: Get all the employees
+      description: This retrieves all the employee IDs within the company the user is in. Must be an employee to invoke this endpoint.
+      tags:
+      - "company"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a list of employees
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    allOf:
+                    - $ref: "#/definitions/User"
+                    - $ref: "#/definitions/Employee"
+    delete:
+      summary: Delete some employees
+      description: Delete a list of employees. Only the manager can delete employees in his/her company. This will also return a list of all the employees that were successfully deleted.
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
   /team/mylist:
     get:
       tags:
@@ -1400,17 +1556,22 @@ definitions:
         - success
         - unknown
         - internal
-  User:
+  User: 
+    allOf:
+    - $ref: "#/definitions/UserNew"
+    - type: object
+      properties:
+        userID: 
+          type: "integer"
+        isUtd: {type: "boolean"}
+        isEmployee: {type: "boolean"}
+  UserNew:
     type: "object"
     properties:
-      userID: 
-        type: "integer"
       fname: {type: "string", maxLength: 50}
       lname: {type: "string", maxLength: 50}
       email: {type: "string", maxLength: 100}
       address: {type: "string", maxLength: 100}
-      isUtd: {type: "boolean"}
-      isEmployee: {type: "boolean"}
   Employee:
     allOf: 
     - $ref: "#/definitions/User"

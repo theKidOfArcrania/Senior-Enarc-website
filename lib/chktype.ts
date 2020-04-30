@@ -4,6 +4,7 @@ import msg from './msg';
 import config from './config';
 
 export type FnChk = (a: any) => void;
+export type PartialFn<Ent> = {[P in keyof Ent]?: FnChk}
 
 /**
  * Dynamically type checks that a certain value has a specific typename.
@@ -76,7 +77,7 @@ const fns = {
       throw new Error(`Must be ${JSON.stringify([...enumTyp.values()])}`);
     }
   },
-  obj: (props: {[P: string]: FnChk}) => (obj: any): void => {
+  obj: <Ent>(props: PartialFn<Ent>) => (obj: any): void => {
     typChk('object')(obj);
     for (const p of Object.keys(props)) {
       // assert this is correct
@@ -102,7 +103,7 @@ const fns = {
       chkr(val);
     }
   },
-  maybeDefinedObjExcept: (props: {[P: string]: FnChk}, except: string) =>
+  maybeDefinedObjExcept: <Ent>(props: PartialFn<Ent>, except: string) =>
     (obj: any): void => {
       typChk('object')(obj);
       for (const p of Object.keys(props)) {

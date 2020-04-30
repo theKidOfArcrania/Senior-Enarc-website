@@ -163,7 +163,7 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    */
   async deleteAllStudents(): Promise<void> {
     await this.checkValid();
-    await this._query('DELETE FROM User WHERE EXISTS ' +
+    await this._query('DELETE FROM Users WHERE EXISTS ' +
         '(SELECT suid FROM Student WHERE suid = userID)');
   }
 
@@ -171,6 +171,17 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
   /* ************************************
    * FIND AGGREGATES
    * ************************************/
+
+  /**
+   * Finds all the employees that reside at a company
+   * @param company - the company to search from
+   * @returns a list of user IDs
+   */
+  async findEmployeesAt(company: string): Promise<number[]> {
+    const qstr = 'SELECT euid FROM Employee WHERE worksAt = ?';
+    const res = await this._query(qstr, [company]);
+    return Array.prototype.map.call(res, (v) => v.euid);
+  }
 
   /**
    * Searches for the user ID's of all students that are on this team
@@ -201,9 +212,10 @@ class SQLDatabaseTransaction extends typ.DatabaseTransaction<
    */
   async findTeamChoices(tid): Promise<number[]> {
     await this.checkValid();
+
     const qstr = 'SELECT * FROM Choice WHERE tid = ?';
     const res = (await this._query(qstr, [tid])).result;
-    const rankedList = Array(6);
+    const rankedList = [];
     for (const choice of res) {
       rankedList[choice['ranking']] = choice['pid'];
     }

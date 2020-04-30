@@ -7,6 +7,8 @@ import {CookieAccessInfo as cookacc} from 'cookiejar';
 
 import type msg from '../lib/msg';
 import * as ent from '../lib/model/enttypes';
+import * as db from '../lib/model/db';
+import * as loader from '../test/data/loader';
 import type * as utyp from '../lib/model/usertypes';
 import config from '../lib/config';
 
@@ -32,29 +34,33 @@ util.Reentrant.prototype.tryLock = async function(): Promise<boolean> {
   return true;
 };
 
-const eDowley = 'adowley0@myspace.com';
-const eBrown = 'tbrownjohn7@cdbaby.com';
-const eStennes = 'hstennesa@cmu.edu';
-const eVivianne = 'vweine4@ox.ac.uk';
-const eDarline = 'deric8@un.org';
-const eCattermoul = 'mcattermoul1@photobucket.com';
-const eKrystal = 'kfurlow5@china.com.cn';
-const eTiff = 'tlezemereh@ftc.gov';
+const emDowley = 'adowley0@myspace.com';
+const emBrown = 'tbrownjohn7@cdbaby.com';
+const emStennes = 'hstennesa@cmu.edu';
+const emVivianne = 'vweine4@ox.ac.uk';
+const emDarline = 'deric8@un.org';
+const emCattermoul = 'mcattermoul1@photobucket.com';
+const emKrystal = 'kfurlow5@china.com.cn';
+const emTiff = 'tlezemereh@ftc.gov';
+const emDonne = 'ldonnei@seesaa.net';
 
-const eBrownPass =
+const emBrownPass =
     'e2fb7d22771b5e55d4707630c62420eea3a2904847f290eea627a7b9e7ded495';
 
 const uspecs = {
-  [eBrown]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'faculty'},
-  [eDowley]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
-  [eStennes]: {isAdmin: false, isUtd: true, isEmployee: false, uType: 'staff'},
-  [eDarline]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
-  [eVivianne]: {isAdmin: false, isUtd: false, isEmployee: true, uType: null},
-  [eCattermoul]: {
+  [emBrown]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'faculty'},
+  [emDowley]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'student'},
+  [emStennes]: {isAdmin: false, isUtd: true, isEmployee: false, uType: 'staff'},
+  [emDarline]: {
+    isAdmin: false, isUtd: true, isEmployee: true, uType: 'student',
+  },
+  [emVivianne]: {isAdmin: false, isUtd: false, isEmployee: true, uType: null},
+  [emCattermoul]: {
     isAdmin: false, isUtd: true, isEmployee: false, uType: 'student',
   },
-  [eKrystal]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'student'},
-  [eTiff]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'faculty'},
+  [emKrystal]: {isAdmin: true, isUtd: true, isEmployee: true, uType: 'student'},
+  [emTiff]: {isAdmin: false, isUtd: true, isEmployee: true, uType: 'faculty'},
+  [emDonne]: {isAdmin: false, isUtd: false, isEmployee: true, uType: null},
 };
 
 describe('server', function() {
@@ -150,33 +156,33 @@ describe('server', function() {
     });
 
     it('authenticated after login, includes information', async function() {
-      await doLogin(eBrown);
+      await doLogin(emBrown);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eBrown]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[emBrown]);
     });
 
     it('should authenticate with correct email/password', async function() {
       const r1 = await json.post('/api/v1/login', {
-        email: eBrown,
-        password: eBrownPass});
+        email: emBrown,
+        password: emBrownPass});
       assert(r1.success);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eBrown]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[emBrown]);
     });
 
     it('should not auth with non employee', async function() {
       const r1 = await json.post('/api/v1/login', {
-        email: eStennes,
-        password: eBrownPass});
+        email: emStennes,
+        password: emBrownPass});
       assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
       assert.strictEqual(r1.debug, 'notemployee');
     });
 
     it('logout should no longer have session', async function() {
-      await doLogin(eBrown);
+      await doLogin(emBrown);
       const r1 = await json.get('/api/v1/checksess');
       assert(r1.success);
       const r2 = await json.post('/api/v1/logout');
@@ -189,7 +195,7 @@ describe('server', function() {
     it('should not auth with invalid email', async function() {
       const r1 = await json.post('/api/v1/login', {
         email: 'bademail@gmail.com',
-        password: eBrownPass});
+        password: emBrownPass});
       assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
       assert.strictEqual(r1.debug, 'nouser');
@@ -197,7 +203,7 @@ describe('server', function() {
 
     it('should not auth with invalid password', async function() {
       const r1 = await json.post('/api/v1/login', {
-        email: eBrown,
+        email: emBrown,
         password: 'badpass'});
       assert.strictEqual(agent.jar.getCookies(cookacc.All).length, 0);
       assert(!r1.success);
@@ -215,12 +221,12 @@ describe('server', function() {
 
     it('should authenticate utd with correct email', async function() {
       const r1 = await json.post('/api/v1/utdlogin', {
-        email: eDowley,
+        email: emDowley,
       });
       assert(r1.success);
       const r2 = await json.get('/api/v1/checksess');
       assert(r2.success);
-      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[eDowley]);
+      assert.deepStrictEqual(getCredsFromUser(r2.body), uspecs[emDowley]);
     });
   });
 
@@ -232,13 +238,13 @@ describe('server', function() {
         assert.strictEqual(r1.debug, 'nologin');
       });
       it('tbrown has no teams', async function() {
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r1 = await json.get('/api/v1/team');
         assert(r1.success);
         assert.strictEqual(r1.body, null);
       });
       it('dowley is in team 39', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/team');
         assert(r1.success);
         assert.strictEqual(r1.body.tid, 39);
@@ -252,17 +258,17 @@ describe('server', function() {
         }
 
         assert(found);
-        assert.strictEqual(found.email, eDowley);
+        assert.strictEqual(found.email, emDowley);
       });
       it('Vivianne (non UTD employees) will see first team that they are in',
           async function() {
-            await doLogin(eVivianne);
+            await doLogin(emVivianne);
             const r1 = await json.get('/api/v1/team');
             assert(r1.success);
             assert.strictEqual(r1.body.tid, 7);
           });
       it('Vivianne is not in the list of team.members', async function() {
-        await doLogin(eVivianne);
+        await doLogin(emVivianne);
         const r1 = await json.get('/api/v1/team');
         assert(r1.success);
         for (const m of r1.body.members) {
@@ -270,7 +276,7 @@ describe('server', function() {
         }
       });
       it('dowley can access own teams only', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.post('/api/v1/team', util.range(0, 53));
         assert(r1.success);
         const teams = Object.keys(r1.body)
@@ -279,7 +285,7 @@ describe('server', function() {
         assert.deepStrictEqual(teams, [6, 39, 42, 50]);
       });
       it('tbrown (admins) can access all teams', async function() {
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r1 = await json.post('/api/v1/team', util.range(0, 53));
         assert(r1.success);
         const teams = Object.keys(r1.body)
@@ -288,7 +294,7 @@ describe('server', function() {
         assert.deepStrictEqual(teams, util.range(1, 51));
       });
       it('stennes (staff) can access all teams', async function() {
-        await doLogin(eStennes);
+        await doLogin(emStennes);
         const r1 = await json.post('/api/v1/team', util.range(0, 53));
         assert(r1.success);
         const teams = Object.keys(r1.body)
@@ -297,7 +303,7 @@ describe('server', function() {
         assert.deepStrictEqual(teams, util.range(1, 51));
       });
       it('Vivianne has access to her own teams', async function() {
-        await doLogin(eVivianne);
+        await doLogin(emVivianne);
         const r1 = await json.post('/api/v1/team', util.range(0, 53));
         assert(r1.success);
         const teams = Object.keys(r1.body)
@@ -306,7 +312,7 @@ describe('server', function() {
         assert.deepStrictEqual(teams, [7, 39, 49]);
       });
       it('should not alter unless team leader', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 4, 12]});
         assert(!r1.success);
@@ -314,34 +320,34 @@ describe('server', function() {
       });
       it('should not allow changing team name to ' +
           'already existing team name', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/team',
             {name: 'Group 38'});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'badteamname');
       });
       it('should not make non-member leader', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/team', {leader: 9});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notinteam');
       });
       it('should not duplicate project choices', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 8, 12]});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'duplicatechoice');
       });
       it('should not have invalid project', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/team',
             {choices: [8, 9, 5, 2, 12, 55]});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'badproj');
       });
       it('should successfully change password ', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/team',
             {password: 'NewPassword'});
         assert(r1.success);
@@ -352,38 +358,38 @@ describe('server', function() {
     });
     describe('/team/member', function() {
       it('should not allow non-leader to remove member', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1 = await json.delete('/api/v1/team/member',
             [0]);
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notteamleader');
       });
       it('should not allow leader to remove self', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.delete('/api/v1/team/member',
             [0]);
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'teamremoveself');
       });
       it('should not allow leader to remove non-member', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.delete('/api/v1/team/member',
             [4]);
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notinteam');
       });
       it('should allow leader to remove member', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.delete('/api/v1/team/member',
             [3]);
         assert(r1.success);
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r2 = await json.post('/api/v1/team/join', {team: 39,
           password: null});
         assert(r2.success);
       });
       it('must be student to join a team', async function() {
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r2 = await json.post('/api/v1/team/join', {team: 39,
           password: null});
         assert(!r2.success);
@@ -397,14 +403,14 @@ describe('server', function() {
         assert.strictEqual(r1.debug, 'nologin');
       });
       it('stennes (staff) can list all teams', async function() {
-        await doLogin(eStennes);
+        await doLogin(emStennes);
         const r1 = await json.get('/api/v1/team/list');
         assert(r1.success);
         assert.deepStrictEqual(r1.body.nsort(),
             util.range(1, 51));
       });
       it('darline gets access to public teams', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.get('/api/v1/team/list');
         assert(r1.success);
         assert.deepStrictEqual(r1.body.nsort(), util.range(3, 51));
@@ -412,7 +418,7 @@ describe('server', function() {
     });
     describe('/team/mylist', function() {
       it('should return teams with member of/mentoring/etc', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/team/mylist');
         assert(r1.success);
         assert.deepStrictEqual(r1.body.nsort(), [6, 39, 42, 50]);
@@ -420,35 +426,35 @@ describe('server', function() {
     });
     describe('/team/join', function() {
       it('should return already part of team', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.post('/api/v1/team/join', {team: 40,
           password: null});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'alreadyjoin');
       });
       it('should return no such team exists', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 51,
           password: null});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'badteam');
       });
       it('should return team is full', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 39,
           password: null});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'teamfull');
       });
       it('should return team requires a password', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 1,
           password: null});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'noteampass');
       });
       it('should return invalid password', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 1,
           password: 'null'});
         assert(!r1.success);
@@ -456,7 +462,7 @@ describe('server', function() {
       });
       it('should return successfully joined team w/o ' +
           'password', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 3,
           password: null});
         assert(r1.success);
@@ -464,7 +470,7 @@ describe('server', function() {
         assert(r2.success);
       });
       it('should return successfully joined team', async function() {
-        await doLogin(eDarline);
+        await doLogin(emDarline);
         const r1 = await json.post('/api/v1/team/join', {team: 2,
           password: 'someotherhash'});
         assert(r1.success);
@@ -472,18 +478,18 @@ describe('server', function() {
     });
     describe('/team/leave', async function() {
       it('should make new leader if leader leaves', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.post('/api/v1/team/leave');
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'teamleader');
       });
       it('should allow student to leave group', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1 = await json.post('/api/v1/team/leave');
         assert(r1.success);
       });
       it('should fail if student is not in group', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1: msg = await json.post('/api/v1/team/leave');
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notinteam');
@@ -495,19 +501,19 @@ describe('server', function() {
       37, 40, 42, 44, 47, 48];
     describe('/project', function() {
       it('should return no projects to view', async function() {
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r1 = await json.get('/api/v1/project');
         assert(r1.success);
         assert.strictEqual(r1.body, null);
       });
       it('should return first project for this user', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/project');
         assert(r1.success);
         assert.strictEqual(r1.body.projID, 2);
       });
       it('should show info about public projects', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1 = await json.post('/api/v1/project',
             util.range(0, 52));
         assert(r1.success);
@@ -517,7 +523,7 @@ describe('server', function() {
         assert.deepStrictEqual(keys, publicProjs);
       });
       it('stennes (staff) can access all projects', async function() {
-        await doLogin(eStennes);
+        await doLogin(emStennes);
         const r1 = await json.post('/api/v1/project', util.range(0, 53));
         assert(r1.success);
         const projects = Object.keys(r1.body)
@@ -527,7 +533,7 @@ describe('server', function() {
       });
       it('Vivianne only has access to her company projects/ projects she is in',
           async function() {
-            await doLogin(eVivianne);
+            await doLogin(emVivianne);
             const r1 = await json.post('/api/v1/project', util.range(0, 53));
             assert(r1.success);
             const projects = Object.keys(r1.body)
@@ -541,7 +547,7 @@ describe('server', function() {
         const list = [...new Set([...publicProjs, ...fullAccess])];
         list.nsort();
 
-        await doLogin(eTiff);
+        await doLogin(emTiff);
         const r1 = await json.post('/api/v1/project', util.range(0, 53));
         assert(r1.success);
         const pids = Object.keys(r1.body)
@@ -558,7 +564,7 @@ describe('server', function() {
         assert.deepStrictEqual(actualFullAccess, fullAccess);
       });
       it('Project does not exist', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/project',
             {projID: 51, pName: 'NewName'});
         assert(!r1.success);
@@ -566,21 +572,21 @@ describe('server', function() {
       });
       it('should not allow modification of project ' +
           'w/o permissions', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/project',
             {projID: 1, pName: 'NewName'});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'nopermproj');
       });
       it('project cannot be modified', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.put('/api/v1/project',
             {projID: 2, pName: 'NewName'});
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'badstatus');
       });
       it('modified project name', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1: msg = await json.put('/api/v1/project',
             {projID: 3, pName: 'NewName'});
         assert(r1.success);
@@ -592,7 +598,7 @@ describe('server', function() {
     });
     describe('/project/submit', function() {
       it('should only allow employees to add projects', async function() {
-        await doLogin(eCattermoul);
+        await doLogin(emCattermoul);
         const r1 = await json.post('/api/v1/project/submit',
             {pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
               image: null, projDoc: null});
@@ -600,7 +606,7 @@ describe('server', function() {
         assert.strictEqual(r1.debug, 'notemployee');
       });
       it('should successfully add project', async function() {
-        await doLogin(eKrystal);
+        await doLogin(emKrystal);
         const proj: Partial<ent.Project> = {
           pName: 'Test', pDesc: 'test test', sponsor: 1, mentor: 4,
           image: null, projDoc: null};
@@ -608,7 +614,7 @@ describe('server', function() {
         assert(r1.success);
 
         // Check that it was added
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r2 = await json.get('/api/v1/project/list');
         assert(r2.success);
         const added = r2.body.nsort()[r2.body.length - 1];
@@ -631,14 +637,14 @@ describe('server', function() {
     });
     describe('/project/mylist', function() {
       it('should return all projects user is part of', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/project/mylist');
         assert(r1.success);
       });
     });
     describe('/project/list', function() {
       it('should return all public projects', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/project/list');
         assert(r1.success);
       });
@@ -658,13 +664,13 @@ describe('server', function() {
       assert.strictEqual(r.debug, 'nologin');
     });
     it('should fail if we send no file', async function() {
-      await doLogin(eDowley);
+      await doLogin(emDowley);
       const r: msg = await json.post('/api/v1/upload');
       assert(!r.success);
       assert.strictEqual(r.debug, 'nofile');
     });
     it('should fail if we send file to wrong param', async function() {
-      await doLogin(eDowley);
+      await doLogin(emDowley);
       const r: msg = await agent.post('/api/v1/upload')
           .set('accept', 'json')
           .field('file', 'notafile')
@@ -675,7 +681,7 @@ describe('server', function() {
       assert.strictEqual(r.debug, 'nofile');
     });
     it('should fail if we send multiple files', async function() {
-      await doLogin(eDowley);
+      await doLogin(emDowley);
       const r: msg = await agent.post('/api/v1/upload')
           .set('accept', 'json')
           .attach('file', file, 'test.jpg')
@@ -686,7 +692,7 @@ describe('server', function() {
       assert.strictEqual(r.debug, 'multifile');
     });
     it('should should return a name of the file we upload', async function() {
-      await doLogin(eDowley);
+      await doLogin(emDowley);
       const r: msg = await agent.post('/api/v1/upload')
           .set('accept', 'json')
           .attach('file', file, 'test.jpg')
@@ -701,7 +707,7 @@ describe('server', function() {
     });
     it('should should strip beginning backslashes', async function() {
       const fileName = '%2f%2ftest.jpg$%!@#$%^;*()__+_*&^%$#@@:\\":';
-      await doLogin(eDowley);
+      await doLogin(emDowley);
       const r: msg = await agent.post('/api/v1/upload')
           .set('accept', 'json')
           .attach('file', file, `/haha/path/${fileName}`)
@@ -719,23 +725,260 @@ describe('server', function() {
   describe('admin', function() {
     describe('/admin/', function() {
       it('should not accept non-admin user', async function() {
-        await doLogin(eDowley);
+        await doLogin(emDowley);
         const r1 = await json.get('/api/v1/admin/nonexistent');
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notadmin');
       });
       it('should allow admin to create new entities', async function() {
-        await doLogin(eBrown);
+        await doLogin(emBrown);
         const r1 = await json.post('/api/v1/admin/company',
             {name: 'testComp', logo: fileID, manager: 0});
         assert(r1.success);
       });
     });
   });
-});
-
 // Load back into DB after mass deletenop
-// getInst().doTransaction(async function(tr) {
+// db.getInst().doTransaction(async function(tr) {
 //           loadIntoDB(tr);
 //           return true;
 //         });
+  describe('company', function() {
+    const chkNonEmps = (it: Mocha.TestFunction, method: Function, ...args):
+        void => {
+      it('non employees should not have access', async function() {
+        await doLogin(emStennes);
+        const r: msg = await method(...args);
+        assert(!r.success);
+        assert.strictEqual(r.debug, 'notemployee');
+      });
+    };
+    describe('/company', function() {
+      chkNonEmps(it, json.get, '/api/v1/company');
+    });
+    describe('/company/people', function() {
+      describe('GET', function() {
+        chkNonEmps(it, json.get, '/api/v1/company/people?id=3');
+        it('requires id parameter', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people');
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'badformat');
+        });
+        it('Vivanne can see employees in her company', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people?id=18');
+          assert(r.success);
+          const spc = Object.assign({email: emDonne}, uspecs[emDonne]);
+          const actual: any = util.copyAttribs({}, r.body, Object.keys(spc));
+          if (!actual.isAdmin) actual.isAdmin = false;
+          assert.deepStrictEqual(actual, spc);
+        });
+        it('Bad employee ID', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people?id=1337');
+          assert(r.success);
+          assert.strictEqual(r.body, null);
+        });
+        it('Vivanne cannot see employees not in her company', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people?id=19');
+          assert(r.success);
+          assert.strictEqual(r.body, null);
+        });
+      });
+      describe('POST', function() {
+        const newEmp = {
+          fname: 'Lilly',
+          lname: 'Fu',
+          email: 'lilfu@enarc.org',
+          address: null,
+        };
+        chkNonEmps(it, json.post, '/api/v1/company/people', newEmp);
+        it('Vivianne (non-manager) cannot add new employee', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.post('/api/v1/company/people', newEmp);
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'notmanager');
+        });
+        it('Cannot add employee with same email', async function() {
+          await doLogin(emKrystal);
+          const r: msg = await json.post('/api/v1/company/people', {
+            fname: 'Brownian',
+            lname: 'Motion',
+            email: emBrown,
+            address: '1234 Physics Street',
+          });
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'bademail');
+        });
+        it('Krystal (manager) can add new employee', async function() {
+          await doLogin(emKrystal);
+          const r: msg = await json.post('/api/v1/company/people', newEmp);
+          assert(r.success);
+          assert(util.isNumber(r.body.id));
+          const r2: msg = await json.get('/api/v1/company/people?id=' +
+              r.body.id);
+          assert(r2.success);
+
+          const expect = Object.assign({
+            worksAt: loader.db.EMPLOYEE.get(7).worksAt,
+            isEmployee: true,
+            isUtd: false,
+            oneTimePass: true,
+          }, newEmp);
+          const actual = util.copyAttribs({}, r2.body, Object.keys(expect));
+          assert.deepStrictEqual(actual, expect);
+          await db.getInst().doRTransaction(async (tr) => {
+            const emp = await tr.loadEmployeeInfo(r.body.id);
+            if (util.isNull(emp)) {
+              assert.fail('Employee not in DB');
+              return;
+            }
+            assert(await util.chkPassword(r.body.password, emp.password));
+          });
+        });
+      });
+      describe('PUT', function() {
+        const change = {
+          userID: 18,
+          email: emBrown,
+          address: 'Some address',
+        };
+        chkNonEmps(it, json.put, '/api/v1/company/people', change);
+        it('Vivianne (non manager) cannot modify employees', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.put('/api/v1/company/people', change);
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'notmanager');
+        });
+        it('Krystal (manager) cannot modify other company', async function() {
+          await doLogin(emKrystal);
+          const r: msg = await json.put('/api/v1/company/people', change);
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'baduid');
+        });
+        it('Cannot change employee to have dup email', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.put('/api/v1/company/people', change);
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'bademail');
+        });
+        it('Bad uid modify should error', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.put('/api/v1/company/people',
+              {userID: 1012});
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'baduid');
+        });
+        it('Empty modify should error', async function() {
+          await doLogin(emKrystal);
+          const r: msg = await json.put('/api/v1/company/people',
+              {userID: 7});
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'empty');
+        });
+        it('Successfully changes email and address', async function() {
+          await doLogin(emDonne);
+          change.email = 'someotheremail';
+          const r: msg = await json.put('/api/v1/company/people', change);
+          assert(r.success);
+
+          const r2: msg = await json.get('/api/v1/company/people?id=' +
+              change.userID);
+          assert(r2.success);
+          const actual = util.copyAttribs({}, r2.body, Object.keys(change));
+          assert.deepStrictEqual(actual, change);
+
+          change.email = emDonne; // Change it back
+          const r3: msg = await json.put('/api/v1/company/people', change);
+          assert(r3.success);
+        });
+      });
+    });
+    describe('/company/people/list', function() {
+      describe('GET', function() {
+        chkNonEmps(it, json.get, '/api/v1/company/people/list');
+        it('Donne should get employees in same company', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.get('/api/v1/company/people/list');
+          assert(r.success);
+          assert(util.isArray(r.body));
+          const ids = r.body.map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6, 18]);
+        });
+        it('Vivianne should get employees in same company', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.get('/api/v1/company/people/list');
+          assert(r.success);
+          assert(util.isArray(r.body));
+          const ids = r.body.map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6, 18]);
+        });
+      });
+      describe('POST', function() {
+        chkNonEmps(it, json.post, '/api/v1/company/people/list', [0]);
+        it('Donne should get employees in same company', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.post('/api/v1/company/people/list',
+              util.range(50));
+          assert(r.success);
+          const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6, 18]);
+        });
+        it('Vivianne should get employees in same company', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.post('/api/v1/company/people/list',
+              util.range(50));
+          assert(r.success);
+          const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6, 18]);
+        });
+        it('Vivianne should get one employee', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.post('/api/v1/company/people/list', [6]);
+          assert(r.success);
+          const ids = Object.keys(r.body).map((n) => parseInt(n)).nsort();
+          assert.deepStrictEqual(ids, [6]);
+        });
+      });
+      describe('DELETE', function() {
+        chkNonEmps(it, json.delete, '/api/v1/company/people/list', [0]);
+        it('Vivianne (non manager) cannot delete emps', async function() {
+          await doLogin(emVivianne);
+          const r: msg = await json.delete('/api/v1/company/people/list',
+              util.range(50));
+          assert(!r.success);
+          assert.strictEqual(r.debug, 'notmanager');
+        });
+        it('Donne (manager) cannot delete employees outside her company',
+            async function() {
+              await doLogin(emDonne);
+              const r: msg = await json.delete('/api/v1/company/people/list',
+                  [1, 2, 3, 4]);
+              assert(r.success); // Successfull, but empty list modified
+              assert.deepStrictEqual(r.body, []);
+            });
+        it('Donne (manager) cannot remove herself', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.delete('/api/v1/company/people/list',
+              [17, 18, 19]);
+          assert(r.success); // Successfull, but empty list modified
+          assert.deepStrictEqual(r.body, []);
+        });
+        it('Donne (manager) deletes Vivianne', async function() {
+          await doLogin(emDonne);
+          const r: msg = await json.delete('/api/v1/company/people/list',
+              [6, 7]);
+          assert(r.success);
+          assert.deepStrictEqual(r.body, [6]);
+
+          const r2: msg = await json.get('/api/v1/company/people?id=6');
+          assert(r2.success);
+          assert.strictEqual(r2.body, null);
+        });
+      });
+    });
+  });
+});
+

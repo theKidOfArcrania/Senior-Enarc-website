@@ -16,6 +16,7 @@ export enum MessageType {
 const mt = MessageType;
 export const codes = {
   alreadyjoin: mt.ILL_STATE,
+  bademail: mt.ILL_ARG,
   badformat: mt.ILL_ARG,
   badstatus: mt.PERM,
   badteam: mt.ILL_ARG,
@@ -25,6 +26,8 @@ export const codes = {
   badperm: mt.PERM,
   badpassword: mt.PERM,
   badproj: mt.ILL_ARG,
+  baduid: mt.ILL_ARG,
+  empty: mt.ILL_ARG,
   duplicatechoice: mt.ILL_ARG,
   internal: mt.INTERNAL,
   multifile: mt.ILL_ARG,
@@ -34,6 +37,7 @@ export const codes = {
   nouser: mt.PERM,
   notfound: mt.ILL_ARG,
   notinteam: mt.ILL_ARG,
+  notmanager: mt.PERM,
   notstudent: mt.PERM,
   notemployee: mt.PERM,
   notteamleader: mt.PERM,

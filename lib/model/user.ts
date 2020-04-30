@@ -119,7 +119,9 @@ export class User extends Uent implements typ.User {
    * @param conn - the DB transaction connection
    */
   async reload<T>(conn: db.DatabaseTransaction<T>): Promise<void> {
-    Object.assign(this, await conn.loadUserInfo(this.uid));
+    const res = await conn.loadUserInfo(this.uid);
+    if (isNull(res)) throw new Error('Failed to load user');
+    Object.assign(this, res);
     if (this.isEmployee) {
       await doReloadOr(conn, this, 'employee', Employee.bind(null, this.uid));
     }
@@ -169,6 +171,16 @@ export class Employee extends Uent implements typ.Employee {
     if (isNull(res)) throw new Error('Failed to load user');
     delete res.euid;
     Object.assign(this, res);
+  }
+
+  /**
+   * This normalization will also destroy the password hash so that way that
+   * never gets leaked out when we send it to the client
+   */
+  normalize(): this {
+    const res = super.normalize();
+    delete res.password; // Don't ever leak sensitive password hash!
+    return res;
   }
 }
 
