@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   description: "This is the senior enarc project, which is a new way to manage the CS senior design projects. Use this page to browse all the API endpoints allowed by the backend."
-  version: "1.0.3"
+  version: "1.1.4"
   title: "Senior Enarc Backend"
   termsOfService: ""
   contact:
@@ -16,6 +16,8 @@ tags:
   description: "uploading/downloading file links"
 - name: "login"
   description: "your essential login credentials"
+- name: user
+  description: Them basic user information
 - name: "project"
   description: "viewing and managing potential projects"
 - name: "team"
@@ -177,6 +179,155 @@ paths:
               properties:
                 body: 
                   type: "object"
+  /user:
+    get:
+      tags:
+      - "user"
+      summary: "View your user info *** NOT IMPLEMENTED ***"
+      description: "Pretty much same thing as checksess. You can also see some basic user information about yourself in the body parameter output. NOT IMPLEMENTED"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: object
+              properties:
+                body:
+                  allOf:
+                  - $ref: "#/definitions/User"
+                  - $ref: "#/definitions/Employee"
+                  - $ref: "#/definitions/UTDPersonnel"
+    put:
+      tags:
+      - user
+      summary: Update user info *** NOT IMPLEMENTED ***
+      description: Update critical user information such as names/emails/passwords/and student info such as major/resume. Students are probably not allowed to change emails. NOT IMPLEMENTED
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: body
+        description: The information to change
+        schema:
+          allOf:
+          - $ref: "#/definitions/User"
+          - $ref: "#/definitions/UTDPersonnel"
+          - $ref: "#/definitions/Student"
+          - $ref: "#/definitions/Employee"
+          - $ref: "#/definitions/Faculty"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /user/choice:
+    get:
+      tags:
+      - user
+      summary: Obtains the project choices *** NOT IMPLEMENTED ***
+      description: This is a faculty endpoint for a faculty to view all their project choices as IDs. NOT IMPLEMENTED
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: array
+              items:
+                type: integer
+    post:
+      tags:
+      - user
+      summary: Change project choices *** NOT IMPLEMENTED ***
+      description: Faculty uses this to select projects they might be interested. They may rank choices they want, and some may be left null. NOT IMPLEMENTED
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: body
+        in: body
+        description: List of project IDs
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /user/skill:
+    get:
+      tags:
+      - user
+      summary: Gets all the skills that a student has *** NOT IMPLEMENTED ***
+      description: NOT IMPLEMENTED
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: array
+              items:
+                type: string
+                maxLength: 50
+    post:
+      tags:
+      - user
+      summary: Add skill for student *** NOT IMPLEMENTED ***
+      description: Add some new skills for a student. NOT IMPLEMENTED
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: body
+        in: body
+        description: A string list of skills
+        schema:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    delete:
+      tags:
+      - user
+      summary: Remove a skill for student *** NOT IMPLEMENTED ***
+      description: Remove some skills for a student. NOT IMPLEMENTED
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: body
+        in: body
+        description: A string list of skills
+        schema:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
   /project:
     get:
       tags:
@@ -265,6 +416,82 @@ paths:
           schema:
             allOf:
             - $ref: "#/definitions/Message"
+  /project/skill:
+    get:
+      tags:
+      - project
+      summary: Gets required skills for a project. *** NOT IMPLEMENTED ***
+      description: Gets all the skills that might be required for a project. NOT IMPLEMENTED
+      produces:
+      - "application/json"
+      parameters:
+      - name: id
+        in: query
+        description: The project ID
+        type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: array
+              items:
+                type: string
+                maxLength: 50
+    post:
+      tags:
+      - project
+      summary: Add required skills for a project. *** NOT IMPLEMENTED ***
+      description: Add some skills that may be required for a project
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: body
+        in: body
+        schema:
+          type: object
+          properties:
+            skills:
+              type: array
+              items:
+                type: string
+                maxLength: 50
+            id:
+              type: number
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    delete:
+      tags:
+      - project
+      summary: Remove required skills for project *** NOT IMPLEMENTED ***
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: body
+        in: body
+        schema:
+          type: object
+          properties:
+            skills:
+              type: array
+              items:
+                type: string
+                maxLength: 50
+            id:
+              type: number
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
   /project/submit:
     post:
       tags:
@@ -529,6 +756,72 @@ paths:
                   items: 
                     type: integer
                   example: [0,1,2,3]
+  /companyCreate:
+    post:
+      summary: Create a company and manager *** NOT IMPLEMENTED ***
+      description: This must be created using an invite ID given by a faculty admin. NOT IMPLEMENTED
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          allOf:
+          - $ref: "#/definitions/Invite2"
+          - type: "object"
+            properties:
+              inviteID:
+                type: integer
+              managerPassword:
+                type: string
+                format: password
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+  /company/:
+    get:
+      summary: Get information about the employee's company *** NOT IMPLEMENTED ***
+      description: Obtain information for the employee's company. User must be an employee. NOT IMPLEMENETED
+      tags:
+      - "company"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/Company"
+    put:
+      summary: Modify the company information *** NOT IMPLEMENTED ***
+      description: Modifies an existing employee of the same company. User must be a manager of a company to use this endpoint. All fields here are optional. NOT IMPLEMENTED
+      tags:
+      - "company"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/CompanyNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
   /company/people:
     get:
       summary: Get a single employee info
@@ -1038,6 +1331,7 @@ paths:
                   $ref: "#/definitions/Invite"
     post:
       summary: Create an invite link
+      description: Returns the invite ID. Should be crafted into the proper invite link URL
       tags:
       - "admin"
       consumes: 
@@ -1250,6 +1544,138 @@ paths:
                     $ref: "#/definitions/Project"
     delete:
       summary: Delete some projects
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+  /admin/user:
+    get:
+      summary: Get info on a user
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "query"
+        type: "integer"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  $ref: "#/definitions/User"
+    post:
+      summary: Create a user *** NOT IMPLEMENTED ***
+      description: Depending on the type of user, other parameters might need to be provided, i.e. if the user is an employee, should give employee fields, if user is a student/faculty, give those values. NOT IMPLEMENTED
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/UserNew"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+    put:
+      summary: Modify a user *** NOT IMPLEMENTED ***
+      description: Cannot be used to change the type of the user! MAYBE NOT IMPLEMENTED PROPERLY
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          $ref: "#/definitions/User"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            $ref: "#/definitions/Message"
+  /admin/user/list:
+    get:
+      summary: Get all users
+      tags:
+      - "admin"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: array
+                  items:
+                    type: integer
+    post:
+      summary: Get info on a set of users
+      tags:
+      - "admin"
+      consumes: 
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: array
+          items:
+            type: integer
+      responses:
+        200:
+          description: Sent a valid JSON message
+          schema:
+            allOf:
+            - $ref: "#/definitions/Message"
+            - type: "object"
+              properties:
+                body:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/definitions/User"
+    delete:
+      summary: Delete some users
       tags:
       - "admin"
       consumes: 
@@ -1779,11 +2205,16 @@ definitions:
           type: integer
     - $ref: '#/definitions/InviteNew'
   InviteNew:
+    allOf:
+    - $ref: '#/definitions/Invite2'
+    - type: object
+      properties:
+        expiration:
+          type: string
+          format: date
+  Invite2:
     type: object
     properties:
-      expiration:
-        type: string
-        format: date
       company:
         type: string
         maxLength: 50
