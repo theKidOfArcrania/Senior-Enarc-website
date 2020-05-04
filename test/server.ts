@@ -730,19 +730,65 @@ describe('server', function() {
         assert(!r1.success);
         assert.strictEqual(r1.debug, 'notadmin');
       });
-      it('should allow admin to create new entities', async function() {
-        await doLogin(emBrown);
-        const r1 = await json.post('/api/v1/admin/company',
-            {name: 'testComp', logo: fileID, manager: 0});
-        assert(r1.success);
+      describe('admin can create new entities', function() {
+        it('should allow admin to create new company', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.post('/api/v1/admin/company',
+              {name: 'testComp', logo: fileID, manager: 0});
+          assert(r1.success);
+        });
+        it('should allow admin to create new helpticket', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.post('/api/v1/admin/helpticket',
+              {hStatus: 'OPEN', hDescription: 'please help', requestor: 3});
+          assert(r1.success);
+        });
+        it('should allow admin to create new invite', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.post('/api/v1/admin/invite',
+              {expiration: '01/01/2021', company: null,
+                managerFname: null, managerLname: null, managerEmail: null});
+          assert(r1.success);
+        });
+        it('should allow admin to create new project', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.post('/api/v1/admin/project',
+              {pName: 'Test Proj', image: null, projDoc: null,
+                company: 'Shufflebeat', pDesc: 'have fun', status: 'accepted',
+                sponsor: 1, mentor: 1, advisor: null, visible: true});
+          assert(r1.success);
+        });
+        it('should allow admin to create new team', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.post('/api/v1/admin/team',
+              {assignedProj: null, budget: 1000, leader: null,
+                name: 'Team 99', membLimit: 5, password: null, comments: 'none',
+                choices: [0, 1, 2]});
+          assert(r1.success);
+        });
+      });
+      describe('admin can update entities', function() {
+        it('should not allow empty modification', async function() {
+          await doLogin(emBrown);
+          const r1 = await json.put('/api/v1/admin/company');
+          assert(!r1.success);
+          assert.strictEqual(r1.debug, 'empty');
+        });
+        // it('should allow admin to modify company', async function() {
+        //   await doLogin(emBrown);
+        //   const r1 = await json.put('/api/v1/admin/company',
+        //       [['name', 'Shufflebeat'], {name: 'Shufflebeat',
+        //         logo: fileID, manager: 1}]);
+        //   assert(r1.success);
+        // });
       });
     });
   });
-// Load back into DB after mass deletenop
-// db.getInst().doTransaction(async function(tr) {
-//           loadIntoDB(tr);
-//           return true;
-//         });
+  // Load back into DB after mass deletenop
+  // db.getInst().doTransaction(async function(tr) {
+  //           loadIntoDB(tr);
+  //           return true;
+  //         });
   describe('company', function() {
     const chkNonEmps = (it: Mocha.TestFunction, method: Function, ...args):
         void => {
