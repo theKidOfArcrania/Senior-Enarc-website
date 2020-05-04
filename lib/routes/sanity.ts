@@ -31,7 +31,7 @@ const adminEnts: {[P: string]: [[string, FnChk], {[P: string]: FnChk}]} = {
     requestor: ct.int,
   }],
   invite: [['inviteID', ct.int], {
-    expiration: ct.int,
+    expiration: ct.string, // TODO: change to date
     company: ct.maybeNull(ct.string(50)),
     managerFname: ct.maybeNull(ct.string(50)),
     managerLname: ct.maybeNull(ct.string(50)),
